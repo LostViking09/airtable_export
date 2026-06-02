@@ -208,6 +208,7 @@ export default function App() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [fileName, setFileName] = useState<string>('Nincs betöltött fájl');
   const [showSummary, setShowSummary] = useState(true);
+  const [userToggledSummary, setUserToggledSummary] = useState(false);
   const [showTipus, setShowTipus] = useState(true);
   const [showFtSuffix, setShowFtSuffix] = useState(true);
   const [copySuccess, setCopySuccess] = useState(false);
@@ -237,6 +238,14 @@ export default function App() {
 
   // File upload input reference
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Automatically control summary visibility based on empty/zero amounts unless user manually toggled it
+  useEffect(() => {
+    if (!userToggledSummary && transactions.length > 0) {
+      const hasZeroAmount = transactions.some(t => t.osszeg === 0);
+      setShowSummary(!hasZeroAmount);
+    }
+  }, [transactions, userToggledSummary]);
 
   // Directly map filteredTransactions to transactions since search/filtering is removed
   const filteredTransactions = transactions;
@@ -533,7 +542,7 @@ export default function App() {
           <div className="header-title">
             <h1 className="text-xl font-semibold text-gray-900 tracking-tight flex items-center gap-2">
               <FileSpreadsheet className="w-6 h-6 text-blue-600" />
-              Tranzakció Kezelő
+              Airtable Export
             </h1>
             <p className="text-xs text-gray-500 mt-1">
               Adatforrás: <span className="font-medium text-gray-700 bg-gray-100 px-1.5 py-0.5 rounded italic">{fileName}</span>
@@ -883,18 +892,7 @@ export default function App() {
           )}
         </main>
 
-        {/* Custom Printing Header Section (only visible on print medium) */}
-        <div className="hidden print:block border-b-2 border-gray-800 pb-4 mb-4">
-          <div className="flex justify-between items-baseline">
-            <div>
-              <h1 className="text-xl font-bold text-gray-900">Tranzakció Kezelő Jelentés</h1>
-              <p className="text-xs text-gray-500 mt-1">Forrásfájl: {fileName}</p>
-            </div>
-            <div className="text-right text-xs text-gray-400">
-              Készült: {new Date().toLocaleDateString('hu-HU')}
-            </div>
-          </div>
-        </div>
+
 
         {/* Summary Footer bar matching sample */}
         <footer className={`summary-section ${showSummary ? 'border-t border-gray-200' : ''} bg-[#f9fafb] px-6 md:px-8 py-5 flex flex-col sm:flex-row items-center justify-between gap-4`} id="app-footer">
@@ -906,7 +904,10 @@ export default function App() {
               <button
                 type="button"
                 id="summary-toggle-btn"
-                onClick={() => setShowSummary(!showSummary)}
+                onClick={() => {
+                  setShowSummary(!showSummary);
+                  setUserToggledSummary(true);
+                }}
                 className="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
                 style={{ backgroundColor: showSummary ? '#2563eb' : '#d1d5db' }}
                 role="switch"
@@ -917,7 +918,10 @@ export default function App() {
                   style={{ transform: showSummary ? 'translateX(16px)' : 'translateX(0px)' }}
                 />
               </button>
-              <span className="text-xs font-semibold text-gray-600 cursor-pointer" onClick={() => setShowSummary(!showSummary)}>
+              <span className="text-xs font-semibold text-gray-600 cursor-pointer" onClick={() => {
+                setShowSummary(!showSummary);
+                setUserToggledSummary(true);
+              }}>
                 Összesítés megjelenítése
               </span>
             </div>
@@ -994,6 +998,11 @@ export default function App() {
             </div>
           )}
         </footer>
+
+        {/* Custom Printing Footer Section (only visible on print medium) */}
+        <div className="hidden print:block text-right text-xs text-gray-400 mt-4 pt-2 border-t border-gray-200">
+          Készült: {new Date().toLocaleDateString('hu-HU')}
+        </div>
       </div>
     </div>
   );
