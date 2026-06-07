@@ -13,6 +13,7 @@ interface ShareModalProps {
     separateMunkadij: boolean;
     showFtSuffix: boolean;
   };
+  correction: number;
 }
 
 export const ShareModal: React.FC<ShareModalProps> = ({
@@ -20,6 +21,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
   onClose,
   transactions,
   settings,
+  correction,
 }) => {
   const [editMode, setEditMode] = useState<'none' | 'all' | 'empty'>('empty');
   const [useDefaultAmount, setUseDefaultAmount] = useState(true);
@@ -35,7 +37,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
     compressShareState(transactions, settings, {
       editMode,
       defaultAmount: useDefaultAmount ? defaultAmount : null,
-    })
+    }, correction)
       .then((compressed) => {
         const baseUrl = window.location.origin + window.location.pathname;
         setShareUrl(`${baseUrl}#share=${compressed}`);
@@ -45,7 +47,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
         console.error('Hiba a megosztási URL generálása során:', err);
         setIsGenerating(false);
       });
-  }, [isOpen, transactions, settings, editMode, useDefaultAmount, defaultAmount]);
+  }, [isOpen, transactions, settings, editMode, useDefaultAmount, defaultAmount, correction]);
 
   const handleCopy = async () => {
     try {

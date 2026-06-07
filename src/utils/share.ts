@@ -4,6 +4,7 @@ interface CompressedState {
   t: [string, string, string, string, number, string][]; // datum, kategoria, megnevezes, tipus, osszeg, id
   s: [boolean, boolean, boolean, boolean]; // showSummary, showTipus, separateMunkadij, showFtSuffix
   o: [string, number | null]; // editMode ('none' | 'all' | 'empty'), defaultAmount
+  c?: number; // correction (optional)
 }
 
 function bufferToBase64Url(buffer: ArrayBuffer): string {
@@ -45,12 +46,14 @@ export async function compressShareState(
   options: {
     editMode: 'none' | 'all' | 'empty';
     defaultAmount: number | null;
-  }
+  },
+  correction: number
 ): Promise<string> {
   const compressed: CompressedState = {
     t: transactions.map(t => [t.datum, t.kategoria, t.megnevezes, t.tipus || '', t.osszeg, t.id]),
     s: [settings.showSummary, settings.showTipus, settings.separateMunkadij, settings.showFtSuffix],
-    o: [options.editMode, options.defaultAmount]
+    o: [options.editMode, options.defaultAmount],
+    c: correction
   };
 
   const jsonString = JSON.stringify(compressed);
@@ -83,6 +86,7 @@ export async function decompressShareState(hash: string): Promise<{
     editMode: 'none' | 'all' | 'empty';
     defaultAmount: number | null;
   };
+  correction: number;
 } | null> {
   if (!hash) return null;
   
@@ -129,7 +133,8 @@ export async function decompressShareState(hash: string): Promise<{
       options: {
         editMode: parsed.o[0] as 'none' | 'all' | 'empty',
         defaultAmount: parsed.o[1]
-      }
+      },
+      correction: parsed.c ?? 0
     };
   } catch (e) {
     console.error('Failed to decompress share state:', e);

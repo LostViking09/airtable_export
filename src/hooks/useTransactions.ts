@@ -14,6 +14,7 @@ export function useTransactions() {
   const [showTipus, setShowTipus] = useState(true);
   const [showFtSuffix, setShowFtSuffix] = useState(true);
   const [separateMunkadij, setSeparateMunkadij] = useState(true);
+  const [correction, setCorrection] = useState<number>(0);
 
   // Shared view states
   const [isShared, setIsShared] = useState(false);
@@ -40,6 +41,7 @@ export function useTransactions() {
             setShowTipus(decoded.settings.showTipus);
             setSeparateMunkadij(decoded.settings.separateMunkadij);
             setShowFtSuffix(decoded.settings.showFtSuffix);
+            setCorrection(decoded.correction);
             
             // Prevent auto-summary override
             setUserToggledSummary(true);
@@ -90,8 +92,8 @@ export function useTransactions() {
   }, [filteredTransactions, separateMunkadij]);
 
   const totalAmount = useMemo(() => {
-    return filteredTransactions.reduce((acc, t) => acc + t.osszeg, 0);
-  }, [filteredTransactions]);
+    return filteredTransactions.reduce((acc, t) => acc + t.osszeg, 0) + correction;
+  }, [filteredTransactions, correction]);
 
   const mainTotalAmount = useMemo(() => {
     return mainTransactions.reduce((acc, t) => acc + t.osszeg, 0);
@@ -170,6 +172,8 @@ export function useTransactions() {
     setShowFtSuffix,
     separateMunkadij,
     setSeparateMunkadij,
+    correction,
+    setCorrection,
     
     // Derived
     filteredTransactions,

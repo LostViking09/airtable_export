@@ -22,6 +22,8 @@ export default function App() {
     setShowFtSuffix,
     separateMunkadij,
     setSeparateMunkadij,
+    correction,
+    setCorrection,
     filteredTransactions,
     mainTransactions,
     munkadijTransactions,
@@ -274,6 +276,8 @@ export default function App() {
           onToggleFtSuffix={() => setShowFtSuffix(!showFtSuffix)}
           typeSummaries={typeSummaries}
           totalAmount={totalAmount}
+          correction={correction}
+          onCorrectionChange={setCorrection}
         />
 
         {/* Custom Printing Footer Section (only visible on print medium) */}
@@ -293,6 +297,7 @@ export default function App() {
           separateMunkadij,
           showFtSuffix,
         }}
+        correction={correction}
       />
     </div>
   );

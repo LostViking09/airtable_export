@@ -12,6 +12,8 @@ interface SummaryFooterProps {
   onToggleFtSuffix: () => void;
   typeSummaries: TypeSummary[];
   totalAmount: number;
+  correction: number;
+  onCorrectionChange: (val: number) => void;
 }
 
 export const SummaryFooter: React.FC<SummaryFooterProps> = ({
@@ -25,6 +27,8 @@ export const SummaryFooter: React.FC<SummaryFooterProps> = ({
   onToggleFtSuffix,
   typeSummaries,
   totalAmount,
+  correction,
+  onCorrectionChange,
 }) => {
   return (
     <footer className={`summary-section ${showSummary ? 'border-t border-gray-200' : ''} bg-[#f9fafb] px-6 md:px-8 py-5 flex flex-col sm:flex-row items-center justify-between gap-4`} id="app-footer">
@@ -144,6 +148,30 @@ export const SummaryFooter: React.FC<SummaryFooterProps> = ({
               ))}
             </div>
           ) : null}
+          
+          {/* Correction input section */}
+          <div className={`flex items-center gap-2 text-xs font-medium text-gray-500 ${correction === 0 ? 'no-print' : ''}`} id="correction-container">
+            <span className="text-gray-400 uppercase tracking-wider font-bold text-[10px]">Korrekció:</span>
+            <div className="relative w-28 no-print">
+              <input
+                type="number"
+                value={correction === 0 ? '' : correction}
+                onChange={(e) => {
+                  const val = e.target.value === '' ? 0 : Number(e.target.value);
+                  onCorrectionChange(val);
+                }}
+                placeholder="0"
+                className="w-full bg-white border border-gray-300 rounded-lg px-2.5 py-1 text-xs font-semibold font-mono text-right pr-6 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 shadow-2xs"
+              />
+              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-400 font-semibold select-none">Ft</span>
+            </div>
+            {correction !== 0 && (
+              <span className="hidden print:inline font-semibold font-mono text-gray-900 whitespace-nowrap">
+                {correction > 0 ? `+${formatOsszeg(correction)}` : formatOsszeg(correction)}
+                {showFtSuffix && <span className="text-[10px] text-gray-400 font-normal ml-0.5">Ft</span>}
+              </span>
+            )}
+          </div>
 
           <div className="flex items-center gap-4 justify-between sm:justify-end w-full sm:w-auto">
             <div className="whitespace-nowrap">
