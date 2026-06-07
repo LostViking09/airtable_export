@@ -110,10 +110,9 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
           {separateMunkadij && munkadijTransactions.length > 0 ? (
             <>
               {renderRows(mainTransactions)}
-              <tr className="bg-gray-50/50 print:bg-white no-print-height">
+              <tr className="munkadij-separator bg-gray-50/50 print:bg-white no-print-height">
                 <td 
                   colSpan={showTipus ? (showActionsColumn ? 6 : 5) : (showActionsColumn ? 5 : 4)} 
-                  className="p-0 h-3 border-t-4 border-double border-gray-300 print:border-gray-500"
                 ></td>
               </tr>
               {renderRows(munkadijTransactions, mainTransactions.length)}

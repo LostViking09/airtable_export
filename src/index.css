@@ -45,6 +45,15 @@
   .data-table tr.date-separator td {
     border-bottom: 1.5px solid #60a5fa !important;
   }
+  .data-table tr.munkadij-separator td {
+    border-top: 3px solid #1f2937 !important;
+    border-bottom: none !important;
+    border-left: none !important;
+    border-right: none !important;
+    padding: 0 !important;
+    height: 8px !important;
+    background-color: transparent !important;
+  }
 }
 
 /* UI styles for separators */
@@ -56,8 +65,19 @@
   border-bottom: 1.5px solid #bfdbfe;
 }
 
+.data-table tr.munkadij-separator td {
+  border-top: 4px double #d1d5db !important;
+  border-bottom: none !important;
+  border-left: none !important;
+  border-right: none !important;
+  padding: 0 !important;
+  height: 12px !important;
+  background-color: transparent !important;
+}
+
 /* Ensure amount columns and headers never wrap */
 .amount-cell, .amount-header {
   white-space: nowrap !important;
 }
+
 
