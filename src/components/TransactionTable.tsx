@@ -12,9 +12,16 @@ interface TransactionTableProps {
   showFtSuffix: boolean;
   editingRowId: string | null;
   onStartEdit: (id: string) => void;
-  onSaveEdit: (id: string, updatedFields: Omit<Transaction, 'id'>) => void;
+  onSaveEdit: (id: string, updatedFields: Omit<Transaction, 'id'>, dir?: 'next' | 'prev') => void;
   onCancelEdit: () => void;
   onDelete: (id: string) => void;
+  isShared?: boolean;
+  shareOptions?: {
+    editMode: 'none' | 'all' | 'empty';
+    defaultAmount: number | null;
+  };
+  originalEmptyIds?: Set<string>;
+  originalAmounts?: Record<string, number>;
 }
 
 export const TransactionTable: React.FC<TransactionTableProps> = ({
@@ -29,12 +36,28 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
   onSaveEdit,
   onCancelEdit,
   onDelete,
+  isShared = false,
+  shareOptions,
+  originalEmptyIds,
+  originalAmounts,
 }) => {
+  const showActionsColumn = !isShared || (shareOptions && shareOptions.editMode !== 'none');
+
   const renderRows = (list: Transaction[], listOffset = 0) => {
     return list.map((tx, idx) => {
       const isLastRow = idx === list.length - 1;
       const hasDateChange = !isLastRow && (tx.datum.trim() !== list[idx + 1].datum.trim());
       
+      // Determine editability of the current row
+      let isEditable = true;
+      if (isShared && shareOptions) {
+        if (shareOptions.editMode === 'none') {
+          isEditable = false;
+        } else if (shareOptions.editMode === 'empty') {
+          isEditable = originalEmptyIds ? originalEmptyIds.has(tx.id) : tx.osszeg === 0;
+        }
+      }
+
       return (
         <TransactionRow
           key={tx.id}
@@ -46,9 +69,13 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
           showFtSuffix={showFtSuffix}
           isEditing={editingRowId === tx.id}
           onStartEdit={() => onStartEdit(tx.id)}
-          onSaveEdit={(updatedFields) => onSaveEdit(tx.id, updatedFields)}
+          onSaveEdit={(updatedFields, dir) => onSaveEdit(tx.id, updatedFields, dir)}
           onCancelEdit={onCancelEdit}
           onDelete={() => onDelete(tx.id)}
+          isShared={isShared}
+          isEditable={isEditable}
+          defaultAmount={shareOptions?.defaultAmount}
+          originalAmounts={originalAmounts}
         />
       );
     });
@@ -76,7 +103,7 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
             <th className="text-left font-semibold text-[11px] uppercase tracking-wider text-gray-500 px-6 py-4">Megnevezés</th>
             {showTipus && <th className="text-left font-semibold text-[11px] uppercase tracking-wider text-gray-500 px-6 py-4">Típus</th>}
             <th className="text-right font-semibold text-[11px] uppercase tracking-wider text-gray-500 px-6 py-4 whitespace-nowrap amount-header">Összeg {showFtSuffix ? '(Ft)' : ''}</th>
-            <th className="no-print text-center font-semibold text-[11px] uppercase tracking-wider text-gray-500 px-6 py-4 w-24">Műveletek</th>
+            {showActionsColumn && <th className="no-print text-center font-semibold text-[11px] uppercase tracking-wider text-gray-500 px-6 py-4 w-24">Műveletek</th>}
           </tr>
         </thead>
         <tbody>
@@ -85,7 +112,7 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
               {renderRows(mainTransactions)}
               <tr className="bg-gray-50/50 print:bg-white no-print-height">
                 <td 
-                  colSpan={showTipus ? 6 : 5} 
+                  colSpan={showTipus ? (showActionsColumn ? 6 : 5) : (showActionsColumn ? 5 : 4)} 
                   className="p-0 h-3 border-t-4 border-double border-gray-300 print:border-gray-500"
                 ></td>
               </tr>

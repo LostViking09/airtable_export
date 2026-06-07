@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { Transaction } from '../types';
 import { parseCSV } from '../utils/csv';
 import { parseNumber } from '../utils/format';
+import { decompressShareState } from '../utils/share';
 
 export function useTransactions() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -13,6 +14,59 @@ export function useTransactions() {
   const [showTipus, setShowTipus] = useState(true);
   const [showFtSuffix, setShowFtSuffix] = useState(true);
   const [separateMunkadij, setSeparateMunkadij] = useState(true);
+
+  // Shared view states
+  const [isShared, setIsShared] = useState(false);
+  const [shareOptions, setShareOptions] = useState<{
+    editMode: 'none' | 'all' | 'empty';
+    defaultAmount: number | null;
+  }>({ editMode: 'none', defaultAmount: null });
+  const [originalEmptyIds, setOriginalEmptyIds] = useState<Set<string>>(new Set());
+  const [originalAmounts, setOriginalAmounts] = useState<Record<string, number>>({});
+  const [isLoadingShared, setIsLoadingShared] = useState(false);
+
+  // Load shared state from hash on mount
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash.startsWith('#share=')) {
+      const shareData = hash.slice(7);
+      if (shareData) {
+        setIsLoadingShared(true);
+        decompressShareState(shareData).then(decoded => {
+          if (decoded) {
+            setTransactions(decoded.transactions);
+            setFileName('Megosztott táblázat');
+            setShowSummary(decoded.settings.showSummary);
+            setShowTipus(decoded.settings.showTipus);
+            setSeparateMunkadij(decoded.settings.separateMunkadij);
+            setShowFtSuffix(decoded.settings.showFtSuffix);
+            
+            // Prevent auto-summary override
+            setUserToggledSummary(true);
+            
+            setIsShared(true);
+            setShareOptions(decoded.options);
+            
+            // Track empty IDs and meglévő amounts at load time
+            const emptyIds = new Set<string>();
+            const amounts: Record<string, number> = {};
+            decoded.transactions.forEach(t => {
+              amounts[t.id] = t.osszeg;
+              if (t.osszeg === 0) {
+                emptyIds.add(t.id);
+              }
+            });
+            setOriginalEmptyIds(emptyIds);
+            setOriginalAmounts(amounts);
+          }
+          setIsLoadingShared(false);
+        }).catch(err => {
+          console.error('Failed to load shared state:', err);
+          setIsLoadingShared(false);
+        });
+      }
+    }
+  }, []);
 
   // Automatically control summary visibility based on empty/zero amounts unless user manually toggled it
   useEffect(() => {
@@ -120,6 +174,13 @@ export function useTransactions() {
     totalAmount,
     mainTotalAmount,
     munkadijTotalAmount,
+
+    // Shared state
+    isShared,
+    shareOptions,
+    originalEmptyIds,
+    originalAmounts,
+    isLoadingShared,
 
     // Actions
     addTransaction,
