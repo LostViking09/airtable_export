@@ -42,5 +42,17 @@
     background-color: #f3f4f6 !important;
     color: #111827 !important;
   }
+  .data-table tr.date-separator td {
+    border-bottom: 1.5px solid #60a5fa !important;
+  }
+}
+
+/* UI styles for separators */
+.data-table td {
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.data-table tr.date-separator td {
+  border-bottom: 1.5px solid #bfdbfe;
 }
 

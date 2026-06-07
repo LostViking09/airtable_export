@@ -204,6 +204,56 @@ function formatDescriptionForHTML(desc: string): string {
   }).join('');
 }
 
+function getTipusBadgeClasses(tipus: string, osszeg: number): string {
+  const norm = (tipus || '').trim().toLowerCase();
+  const baseClasses = 'inline-block whitespace-nowrap rounded-full px-3 py-0.5 text-xs font-medium';
+  
+  if (norm === 'saját munkadíj') {
+    return `${baseClasses} bg-indigo-100 text-indigo-900`;
+  }
+  if (norm === 'továbbhárított költség') {
+    if (osszeg < 0) {
+      return `${baseClasses} bg-emerald-100 text-emerald-900`;
+    }
+    return `${baseClasses} bg-sky-100 text-sky-900`;
+  }
+  if (norm === 'továbbhárított munkadíj') {
+    return `${baseClasses} bg-amber-100 text-amber-900`;
+  }
+  if (norm.includes('eszközbérlés')) {
+    return `${baseClasses} bg-teal-100 text-teal-900`;
+  }
+  return `${baseClasses} bg-neutral-100 text-neutral-800`;
+}
+
+function formatTipusForHTML(tipus: string, osszeg: number): string {
+  if (!tipus) return '';
+  const norm = tipus.trim().toLowerCase();
+  let bg = '#f3f4f6';
+  let color = '#1f2937';
+  
+  if (norm === 'saját munkadíj') {
+    bg = '#e0e7ff'; // indigo-100
+    color = '#312e81'; // indigo-900
+  } else if (norm === 'továbbhárított költség') {
+    if (osszeg < 0) {
+      bg = '#d1fae5'; // emerald-100
+      color = '#064e3b'; // emerald-900
+    } else {
+      bg = '#e0f2fe'; // sky-100
+      color = '#0c4a6e'; // sky-900
+    }
+  } else if (norm === 'továbbhárított munkadíj') {
+    bg = '#fef3c7'; // amber-100
+    color = '#78350f'; // amber-900
+  } else if (norm.includes('eszközbérlés')) {
+    bg = '#ccfbf1'; // teal-100
+    color = '#115e59'; // teal-900
+  }
+  
+  return `<span style="background-color: ${bg}; color: ${color}; border-radius: 9999px; padding: 2px 10px; font-weight: 500; font-size: 11px; display: inline-block; white-space: nowrap;">${tipus}</span>`;
+}
+
 export default function App() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [fileName, setFileName] = useState<string>('Nincs betöltött fájl');
@@ -211,6 +261,7 @@ export default function App() {
   const [userToggledSummary, setUserToggledSummary] = useState(false);
   const [showTipus, setShowTipus] = useState(true);
   const [showFtSuffix, setShowFtSuffix] = useState(true);
+  const [separateMunkadij, setSeparateMunkadij] = useState(true);
   const [copySuccess, setCopySuccess] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -250,10 +301,28 @@ export default function App() {
   // Directly map filteredTransactions to transactions since search/filtering is removed
   const filteredTransactions = transactions;
 
-  // Calculate sum of active transactions
+  const mainTransactions = useMemo(() => {
+    if (!separateMunkadij) return filteredTransactions;
+    return filteredTransactions.filter(t => t.tipus?.trim().toLowerCase() !== 'továbbhárított munkadíj');
+  }, [filteredTransactions, separateMunkadij]);
+
+  const munkadijTransactions = useMemo(() => {
+    if (!separateMunkadij) return [];
+    return filteredTransactions.filter(t => t.tipus?.trim().toLowerCase() === 'továbbhárított munkadíj');
+  }, [filteredTransactions, separateMunkadij]);
+
+  // Calculate sums
   const totalAmount = useMemo(() => {
     return filteredTransactions.reduce((acc, t) => acc + t.osszeg, 0);
   }, [filteredTransactions]);
+
+  const mainTotalAmount = useMemo(() => {
+    return mainTransactions.reduce((acc, t) => acc + t.osszeg, 0);
+  }, [mainTransactions]);
+
+  const munkadijTotalAmount = useMemo(() => {
+    return munkadijTransactions.reduce((acc, t) => acc + t.osszeg, 0);
+  }, [munkadijTransactions]);
 
   // Drag & drop handlers
   const handleDragOver = (e: React.DragEvent) => {
@@ -321,7 +390,7 @@ export default function App() {
         ? ['Dátum', 'Rendezvény', 'Megnevezés', 'Típus', showFtSuffix ? 'Összeg (Ft)' : 'Összeg']
         : ['Dátum', 'Rendezvény', 'Megnevezés', showFtSuffix ? 'Összeg (Ft)' : 'Összeg'];
 
-      const bodyRows = filteredTransactions.map(t => {
+      const formatRow = (t: Transaction) => {
         const amtStr = t.osszeg === 0 ? '-' : (formatOsszeg(t.osszeg) + (showFtSuffix ? ' Ft' : ''));
         return showTipus ? [
           formatDatumWithDay(t.datum),
@@ -335,9 +404,19 @@ export default function App() {
           t.megnevezes,
           amtStr
         ];
-      });
+      };
 
-      const tsvContent = [headerRow, ...bodyRows].map(r => r.join('\t')).join('\n');
+      let tsvContent = '';
+      if (separateMunkadij && munkadijTransactions.length > 0) {
+        const tsvRows = [headerRow.join('\t')];
+        mainTransactions.forEach(t => tsvRows.push(formatRow(t).join('\t')));
+        tsvRows.push('');
+        munkadijTransactions.forEach(t => tsvRows.push(formatRow(t).join('\t')));
+        tsvContent = tsvRows.join('\n');
+      } else {
+        const tsvRows = [headerRow.join('\t'), ...filteredTransactions.map(t => formatRow(t).join('\t'))];
+        tsvContent = tsvRows.join('\n');
+      }
       
       let badgeHtml = '';
       if (totalAmount > 0) {
@@ -349,32 +428,72 @@ export default function App() {
       }
 
       const colSpanNum = showTipus ? 4 : 3;
+      const colSpanTotal = showTipus ? 5 : 4;
 
-      const htmlContent = `
-        <table style="border-collapse: collapse; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; width: 100%; border: 1px solid #e5e7eb;">
-          <thead>
-            <tr style="background-color: #f9fafb; border-bottom: 2px solid #e5e7eb;">
-              <th style="padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; border: 1px solid #e5e7eb;">Dátum</th>
-              <th style="padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; border: 1px solid #e5e7eb;">Rendezvény</th>
-              <th style="padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; border: 1px solid #e5e7eb;">Megnevezés</th>
-              ${showTipus ? `<th style="padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; border: 1px solid #e5e7eb;">Típus</th>` : ''}
-              <th style="padding: 10px 14px; text-align: right; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; border: 1px solid #e5e7eb;">Összeg ${showFtSuffix ? '(Ft)' : ''}</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${filteredTransactions.map((t, idx) => `
-              <tr style="border-bottom: 1px solid #f3f4f6; background-color: ${idx % 2 === 1 ? '#fcfcfd' : '#ffffff'};">
-                <td style="padding: 12px 14px; font-size: 13px; color: #374151; border: 1px solid #e5e7eb;">${formatDatumWithDay(t.datum)}</td>
-                <td style="padding: 12px 14px; font-size: 13px; font-weight: bold; color: #111827; border: 1px solid #e5e7eb;">${t.kategoria}</td>
-                <td style="padding: 12px 14px; font-size: 13px; color: #374151; border: 1px solid #e5e7eb;">${formatDescriptionForHTML(t.megnevezes)}</td>
-                ${showTipus ? `<td style="padding: 12px 14px; font-size: 13px; color: #6b7280; border: 1px solid #e5e7eb;">${t.tipus || ''}</td>` : ''}
-                <td style="padding: 12px 14px; font-size: 13px; font-family: monospace; text-align: right; font-weight: 600; color: ${t.osszeg < 0 ? '#059669' : '#111827'}; border: 1px solid #e5e7eb;">
-                  ${t.osszeg === 0 ? '<span style="color: #9ca3af;">-</span>' : (formatOsszeg(t.osszeg) + (showFtSuffix ? ' <span style="color: #9ca3af; font-size: 11px;">Ft</span>' : ''))}
+      const renderRowsHTML = (list: Transaction[]) => {
+        return list.map((t, idx) => {
+          const isLastRow = idx === list.length - 1;
+          const hasDateChange = !isLastRow && (t.datum.trim() !== list[idx + 1].datum.trim());
+          const borderBottomStyle = hasDateChange ? 'border-bottom: 1.5px solid #bfdbfe;' : 'border-bottom: 1px solid #e5e7eb;';
+          return `
+          <tr style="background-color: ${idx % 2 === 1 ? '#fcfcfd' : '#ffffff'};">
+            <td style="padding: 12px 14px; font-size: 13px; color: #374151; border: 1px solid #e5e7eb; ${borderBottomStyle}">${formatDatumWithDay(t.datum)}</td>
+            <td style="padding: 12px 14px; font-size: 13px; font-weight: bold; color: #111827; border: 1px solid #e5e7eb; ${borderBottomStyle}">${t.kategoria}</td>
+            <td style="padding: 12px 14px; font-size: 13px; color: #374151; border: 1px solid #e5e7eb; ${borderBottomStyle}">${formatDescriptionForHTML(t.megnevezes)}</td>
+            ${showTipus ? `<td style="padding: 12px 14px; font-size: 13px; border: 1px solid #e5e7eb; ${borderBottomStyle}">${formatTipusForHTML(t.tipus, t.osszeg)}</td>` : ''}
+            <td style="padding: 12px 14px; font-size: 13px; font-family: monospace; text-align: right; font-weight: 600; color: ${t.osszeg < 0 ? '#059669' : '#111827'}; border: 1px solid #e5e7eb; ${borderBottomStyle}">
+              ${t.osszeg === 0 ? '<span style="color: #9ca3af;">-</span>' : (formatOsszeg(t.osszeg) + (showFtSuffix ? ' <span style="color: #9ca3af; font-size: 11px;">Ft</span>' : ''))}
+            </td>
+          </tr>
+        `;}).join('');
+      };
+
+      let tbodyHtml = '';
+      if (separateMunkadij && munkadijTransactions.length > 0) {
+        tbodyHtml = `
+          ${renderRowsHTML(mainTransactions)}
+          <tr style="background-color: #f9fafb;">
+            <td colspan="${colSpanTotal}" style="padding: 0; height: 12px; border-top: 4px double #9ca3af; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb; border-bottom: none;"></td>
+          </tr>
+          ${renderRowsHTML(munkadijTransactions)}
+        `;
+      } else {
+        tbodyHtml = renderRowsHTML(filteredTransactions);
+      }
+
+      let tfootHtml = '';
+      if (showSummary) {
+        if (separateMunkadij && munkadijTransactions.length > 0) {
+          tfootHtml = `
+            <tfoot>
+              <tr style="background-color: #f9fafb; border-top: 2px solid #e5e7eb;">
+                <td colspan="${colSpanNum}" style="padding: 10px 16px; text-align: right; font-size: 12px; color: #6b7280; border: 1px solid #e5e7eb;">Egyéb tételek összesen:</td>
+                <td style="padding: 10px 16px; font-size: 13px; font-family: monospace; text-align: right; font-weight: 600; color: #374151; border: 1px solid #e5e7eb;">
+                  ${formatOsszeg(mainTotalAmount)}${showFtSuffix ? ' Ft' : ''}
                 </td>
               </tr>
-            `).join('')}
-          </tbody>
-          ${showSummary ? `
+              <tr style="background-color: #f9fafb;">
+                <td colspan="${colSpanNum}" style="padding: 10px 16px; text-align: right; font-size: 12px; color: #6b7280; border: 1px solid #e5e7eb;">Munkadíj összesen:</td>
+                <td style="padding: 10px 16px; font-size: 13px; font-family: monospace; text-align: right; font-weight: 600; color: #374151; border: 1px solid #e5e7eb;">
+                  ${formatOsszeg(munkadijTotalAmount)}${showFtSuffix ? ' Ft' : ''}
+                </td>
+              </tr>
+              <tr style="background-color: #f9fafb; border-top: 1.5px solid #d1d5db;">
+                <td colspan="${colSpanNum}" style="padding: 14px 16px; text-align: right; font-size: 13px; font-weight: bold; color: #111827; border: 1px solid #e5e7eb;">Mindösszesen:</td>
+                <td style="padding: 14px 16px; font-size: 18px; font-family: monospace; text-align: right; font-weight: 900; color: #111827; border: 1px solid #e5e7eb;">
+                  ${formatOsszeg(totalAmount)}${showFtSuffix ? ' Ft' : ''}
+                </td>
+              </tr>
+              <tr style="background-color: #f9fafb;">
+                <td colspan="${colSpanNum}" style="padding: 10px 16px; text-align: right; font-size: 13px; font-weight: bold; color: #374151; border: 1px solid #e5e7eb;">Állapot:</td>
+                <td style="padding: 10px 16px; text-align: right; border: 1px solid #e5e7eb;">
+                  ${badgeHtml}
+                </td>
+              </tr>
+            </tfoot>
+          `;
+        } else {
+          tfootHtml = `
             <tfoot>
               <tr style="background-color: #f9fafb; border-top: 2px solid #e5e7eb;">
                 <td colspan="${colSpanNum}" style="padding: 14px 16px; text-align: right; font-size: 13px; font-weight: bold; color: #374151; border: 1px solid #e5e7eb;">Összesen:</td>
@@ -389,7 +508,25 @@ export default function App() {
                 </td>
               </tr>
             </tfoot>
-          ` : ''}
+          `;
+        }
+      }
+
+      const htmlContent = `
+        <table style="border-collapse: collapse; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; width: 100%; border: 1px solid #e5e7eb;">
+          <thead>
+            <tr style="background-color: #f9fafb; border-bottom: 2px solid #e5e7eb;">
+              <th style="padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; border: 1px solid #e5e7eb;">Dátum</th>
+              <th style="padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; border: 1px solid #e5e7eb;">Rendezvény</th>
+              <th style="padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; border: 1px solid #e5e7eb;">Megnevezés</th>
+              ${showTipus ? `<th style="padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; border: 1px solid #e5e7eb;">Típus</th>` : ''}
+              <th style="padding: 10px 14px; text-align: right; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; border: 1px solid #e5e7eb;">Összeg ${showFtSuffix ? '(Ft)' : ''}</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tbodyHtml}
+          </tbody>
+          ${tfootHtml}
         </table>
       `;
 
@@ -513,6 +650,141 @@ export default function App() {
   // Delete single row
   const deleteRow = (id: string) => {
     setTransactions(prev => prev.filter(t => t.id !== id));
+  };
+
+  const renderTransactionRows = (list: Transaction[], listOffset = 0) => {
+    return list.map((tx, idx) => {
+      const isEditing = editingRowId === tx.id;
+      const isLastRow = idx === list.length - 1;
+      const hasDateChange = !isLastRow && (tx.datum.trim() !== list[idx + 1].datum.trim());
+      return (
+        <tr 
+          key={tx.id} 
+          className={`${(idx + listOffset) % 2 === 1 ? 'bg-[#fcfcfd]' : 'bg-white'} ${hasDateChange ? 'date-separator' : ''}`}
+        >
+          {isEditing ? (
+            <>
+              {/* Datum editing */}
+              <td className="px-4 py-2 text-sm">
+                <input 
+                  type="text"
+                  value={editDate}
+                  onChange={(e) => setEditDate(e.target.value)}
+                  className="w-full bg-white border border-gray-300 rounded px-2 py-1 text-xs"
+                />
+              </td>
+              {/* Category editing */}
+              <td className="px-4 py-2 text-sm">
+                <input 
+                  type="text"
+                  value={editCategory}
+                  onChange={(e) => setEditCategory(e.target.value)}
+                  className="w-full bg-white border border-gray-300 rounded px-2 py-1 text-xs"
+                />
+              </td>
+              {/* Description editing */}
+              <td className="px-4 py-2 text-sm">
+                <input 
+                  type="text"
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  className="w-full bg-white border border-gray-300 rounded px-2 py-1 text-xs"
+                />
+              </td>
+              {/* Tipus editing */}
+              {showTipus && (
+                <td className="px-4 py-2 text-sm">
+                  <input 
+                    type="text"
+                    value={editTipus}
+                    onChange={(e) => setEditTipus(e.target.value)}
+                    className="w-full bg-white border border-gray-300 rounded px-2 py-1 text-xs"
+                  />
+                </td>
+              )}
+              {/* Amount editing */}
+              <td className="px-4 py-2 text-sm">
+                <input 
+                  type="text"
+                  value={editAmount}
+                  onChange={(e) => setEditAmount(e.target.value)}
+                  className="w-full bg-white border border-gray-300 rounded px-2 py-1 text-xs text-right font-mono font-medium"
+                />
+              </td>
+              {/* Inline Edit actions */}
+              <td className="px-4 py-2 text-center flex items-center justify-center gap-1.5">
+                <button
+                  onClick={() => saveEdit(tx.id)}
+                  className="p-1 rounded text-emerald-600 hover:bg-emerald-50 cursor-pointer"
+                  title="Mentés"
+                >
+                  <Check className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setEditingRowId(null)}
+                  className="p-1 rounded text-gray-500 hover:bg-gray-100 cursor-pointer"
+                  title="Mégse"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </td>
+            </>
+          ) : (
+            <>
+              {/* Standard output rows */}
+              <td className="px-6 py-3.5 text-sm text-gray-700 whitespace-nowrap">{formatDatumWithDay(tx.datum)}</td>
+              <td className="px-6 py-3.5 text-sm text-gray-700">
+                <span className="bg-gray-100 text-gray-700 rounded-md px-2.5 py-1 text-xs font-semibold">
+                  {tx.kategoria}
+                </span>
+              </td>
+              <td className="px-6 py-3.5 text-sm text-gray-800 font-medium">
+                {renderDescriptionWithBrackets(tx.megnevezes)}
+              </td>
+              {showTipus && (
+                <td className="px-6 py-3.5 text-sm text-gray-600 font-normal">
+                  {tx.tipus ? (
+                    <span className={getTipusBadgeClasses(tx.tipus, tx.osszeg)}>
+                      {tx.tipus}
+                    </span>
+                  ) : (
+                    <span className="text-gray-350 select-none font-light">-</span>
+                  )}
+                </td>
+              )}
+              <td className={`px-6 py-3.5 text-sm amount-cell text-right ${tx.osszeg < 0 ? 'neg font-bold' : 'text-gray-900 font-bold'} font-mono`}>
+                {tx.osszeg === 0 ? (
+                  <span className="text-gray-300 font-normal select-none">-</span>
+                ) : (
+                  <>
+                    {formatOsszeg(tx.osszeg)} {showFtSuffix && <span className="text-gray-400 font-normal text-xs ml-0.5">Ft</span>}
+                  </>
+                )}
+              </td>
+              {/* Row specific delete and edit btn */}
+              <td className="no-print px-6 py-3.5 text-center whitespace-nowrap">
+                <div className="inline-flex items-center gap-1">
+                  <button
+                    onClick={() => startEdit(tx)}
+                    className="p-1.5 rounded-md text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                    title="Sor szerkesztése"
+                  >
+                    <Edit3 className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => deleteRow(tx.id)}
+                    className="p-1.5 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                    title="Sor törlése"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </td>
+            </>
+          )}
+        </tr>
+      );
+    });
   };
 
   return (
@@ -758,134 +1030,21 @@ export default function App() {
                     <th className="no-print text-center font-semibold text-[11px] uppercase tracking-wider text-gray-500 px-6 py-4 w-24">Műveletek</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {filteredTransactions.map((tx, idx) => {
-                    const isEditing = editingRowId === tx.id;
-                    return (
-                      <tr key={tx.id} className={idx % 2 === 1 ? 'bg-[#fcfcfd]' : 'bg-white'}>
-                        {isEditing ? (
-                          <>
-                            {/* Datum editing */}
-                            <td className="px-4 py-2 text-sm">
-                              <input 
-                                type="text"
-                                value={editDate}
-                                onChange={(e) => setEditDate(e.target.value)}
-                                className="w-full bg-white border border-gray-300 rounded px-2 py-1 text-xs"
-                              />
-                            </td>
-                            {/* Category editing */}
-                            <td className="px-4 py-2 text-sm">
-                              <input 
-                                type="text"
-                                value={editCategory}
-                                onChange={(e) => setEditCategory(e.target.value)}
-                                className="w-full bg-white border border-gray-300 rounded px-2 py-1 text-xs"
-                              />
-                            </td>
-                            {/* Description editing */}
-                            <td className="px-4 py-2 text-sm">
-                              <input 
-                                type="text"
-                                value={editDescription}
-                                onChange={(e) => setEditDescription(e.target.value)}
-                                className="w-full bg-white border border-gray-300 rounded px-2 py-1 text-xs"
-                              />
-                            </td>
-                            {/* Tipus editing */}
-                            {showTipus && (
-                              <td className="px-4 py-2 text-sm">
-                                <input 
-                                  type="text"
-                                  value={editTipus}
-                                  onChange={(e) => setEditTipus(e.target.value)}
-                                  className="w-full bg-white border border-gray-300 rounded px-2 py-1 text-xs"
-                                />
-                              </td>
-                            )}
-                            {/* Amount editing */}
-                            <td className="px-4 py-2 text-sm">
-                              <input 
-                                type="text"
-                                value={editAmount}
-                                onChange={(e) => setEditAmount(e.target.value)}
-                                className="w-full bg-white border border-gray-300 rounded px-2 py-1 text-xs text-right font-mono font-medium"
-                              />
-                            </td>
-                            {/* Inline Edit actions */}
-                            <td className="px-4 py-2 text-center flex items-center justify-center gap-1.5">
-                              <button
-                                onClick={() => saveEdit(tx.id)}
-                                className="p-1 rounded text-emerald-600 hover:bg-emerald-50 cursor-pointer"
-                                title="Mentés"
-                              >
-                                <Check className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => setEditingRowId(null)}
-                                className="p-1 rounded text-gray-500 hover:bg-gray-100 cursor-pointer"
-                                title="Mégse"
-                              >
-                                <X className="w-4 h-4" />
-                              </button>
-                            </td>
-                          </>
-                        ) : (
-                          <>
-                            {/* Standard output rows */}
-                            <td className="px-6 py-3.5 text-sm text-gray-700 whitespace-nowrap">{formatDatumWithDay(tx.datum)}</td>
-                            <td className="px-6 py-3.5 text-sm text-gray-700">
-                              <span className="bg-gray-100 text-gray-700 rounded-md px-2.5 py-1 text-xs font-semibold">
-                                {tx.kategoria}
-                              </span>
-                            </td>
-                            <td className="px-6 py-3.5 text-sm text-gray-800 font-medium">
-                              {renderDescriptionWithBrackets(tx.megnevezes)}
-                            </td>
-                            {showTipus && (
-                              <td className="px-6 py-3.5 text-sm text-gray-600 font-normal">
-                                {tx.tipus ? (
-                                  <span className="bg-neutral-100 text-neutral-700 rounded-md px-2 py-0.5 text-xs font-medium">
-                                    {tx.tipus}
-                                  </span>
-                                ) : (
-                                  <span className="text-gray-350 select-none font-light">-</span>
-                                )}
-                              </td>
-                            )}
-                            <td className={`px-6 py-3.5 text-sm amount-cell text-right ${tx.osszeg < 0 ? 'neg font-bold' : 'text-gray-900 font-bold'} font-mono`}>
-                              {tx.osszeg === 0 ? (
-                                <span className="text-gray-300 font-normal select-none">-</span>
-                              ) : (
-                                <>
-                                  {formatOsszeg(tx.osszeg)} {showFtSuffix && <span className="text-gray-400 font-normal text-xs ml-0.5">Ft</span>}
-                                </>
-                              )}
-                            </td>
-                            {/* Row specific delete and edit btn */}
-                            <td className="no-print px-6 py-3.5 text-center whitespace-nowrap">
-                              <div className="inline-flex items-center gap-1">
-                                <button
-                                  onClick={() => startEdit(tx)}
-                                  className="p-1.5 rounded-md text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
-                                  title="Sor szerkesztése"
-                                >
-                                  <Edit3 className="w-3.5 h-3.5" />
-                                </button>
-                                <button
-                                  onClick={() => deleteRow(tx.id)}
-                                  className="p-1.5 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
-                                  title="Sor törlése"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
-                            </td>
-                          </>
-                        )}
+                <tbody>
+                  {separateMunkadij && munkadijTransactions.length > 0 ? (
+                    <>
+                      {renderTransactionRows(mainTransactions)}
+                      <tr className="bg-gray-50/50 print:bg-white no-print-height">
+                        <td 
+                          colSpan={showTipus ? 6 : 5} 
+                          className="p-0 h-3 border-t-4 border-double border-gray-300 print:border-gray-500"
+                        ></td>
                       </tr>
-                    );
-                  })}
+                      {renderTransactionRows(munkadijTransactions, mainTransactions.length)}
+                    </>
+                  ) : (
+                    renderTransactionRows(filteredTransactions)
+                  )}
                 </tbody>
               </table>
             </div>
@@ -947,6 +1106,27 @@ export default function App() {
               </span>
             </div>
 
+            {/* Toggle separate Munkadíj */}
+            <div className="munkadij-toggle flex items-center gap-3">
+              <button
+                type="button"
+                id="munkadij-toggle-btn"
+                onClick={() => setSeparateMunkadij(!separateMunkadij)}
+                className="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
+                style={{ backgroundColor: separateMunkadij ? '#2563eb' : '#d1d5db' }}
+                role="switch"
+                aria-checked={separateMunkadij}
+              >
+                <span
+                  className="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition duration-200 ease-in-out"
+                  style={{ transform: separateMunkadij ? 'translateX(16px)' : 'translateX(0px)' }}
+                />
+              </button>
+              <span className="text-xs font-semibold text-gray-600 cursor-pointer" onClick={() => setSeparateMunkadij(!separateMunkadij)}>
+                Munkadíj külön csoportosítása
+              </span>
+            </div>
+
             {/* Toggle Ft suffix */}
             <div className="ft-toggle flex items-center gap-3">
               <button
@@ -971,29 +1151,52 @@ export default function App() {
 
           {/* Sum value and corresponding badges */}
           {showSummary && (
-            <div className="flex items-center flex-wrap gap-5 justify-end w-full sm:w-auto" id="totals-container">
-              <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-gray-400 mr-2">Összesen:</span>
-                <span className="text-2xl font-black font-mono text-gray-950">
-                  {formatOsszeg(totalAmount)}
-                  {showFtSuffix && <span className="text-sm font-bold text-gray-500 ml-1">Ft</span>}
-                </span>
-              </div>
-              
-              <div>
-                {totalAmount > 0 ? (
-                  <span className="badge bg-amber-50 text-amber-800 border border-amber-200 px-3.5 py-1.5 rounded-full text-xs font-bold" id="badge-debt-botond">
-                    Botond tartozik
+            <div className="flex flex-col sm:flex-row items-center flex-wrap gap-x-6 gap-y-3 justify-end w-full sm:w-auto text-right" id="totals-container">
+              {separateMunkadij && munkadijTransactions.length > 0 ? (
+                <div className="flex flex-col gap-1 text-xs text-gray-500 font-medium w-full sm:w-auto border-r-0 sm:border-r border-gray-200 pr-0 sm:pr-6 mr-0 sm:mr-1">
+                  <div className="flex justify-between sm:justify-end gap-4">
+                    <span>Egyéb tételek:</span>
+                    <span className="font-semibold font-mono text-gray-900">
+                      {formatOsszeg(mainTotalAmount)}
+                      {showFtSuffix && <span className="text-[10px] text-gray-400 font-normal ml-0.5">Ft</span>}
+                    </span>
+                  </div>
+                  <div className="flex justify-between sm:justify-end gap-4">
+                    <span>Munkadíj:</span>
+                    <span className="font-semibold font-mono text-gray-900">
+                      {formatOsszeg(munkadijTotalAmount)}
+                      {showFtSuffix && <span className="text-[10px] text-gray-400 font-normal ml-0.5">Ft</span>}
+                    </span>
+                  </div>
+                </div>
+              ) : null}
+
+              <div className="flex items-center gap-4 justify-between sm:justify-end w-full sm:w-auto">
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-wider text-gray-400 mr-2">
+                    {separateMunkadij && munkadijTransactions.length > 0 ? 'Mindösszesen:' : 'Összesen:'}
                   </span>
-                ) : totalAmount < 0 ? (
-                  <span className="badge bg-blue-50 text-blue-800 border border-blue-200 px-3.5 py-1.5 rounded-full text-xs font-bold" id="badge-debt-partner">
-                    Partner tartozik
+                  <span className="text-2xl font-black font-mono text-gray-950">
+                    {formatOsszeg(totalAmount)}
+                    {showFtSuffix && <span className="text-sm font-bold text-gray-500 ml-1">Ft</span>}
                   </span>
-                ) : (
-                  <span className="badge bg-emerald-50 text-emerald-800 border border-emerald-200 px-3.5 py-1.5 rounded-full text-xs font-bold" id="badge-debt-settled">
-                    Kiegyenlítve
-                  </span>
-                )}
+                </div>
+                
+                <div>
+                  {totalAmount > 0 ? (
+                    <span className="badge bg-amber-50 text-amber-800 border border-amber-200 px-3.5 py-1.5 rounded-full text-xs font-bold" id="badge-debt-botond">
+                      Botond tartozik
+                    </span>
+                  ) : totalAmount < 0 ? (
+                    <span className="badge bg-blue-50 text-blue-800 border border-blue-200 px-3.5 py-1.5 rounded-full text-xs font-bold" id="badge-debt-partner">
+                      Partner tartozik
+                    </span>
+                  ) : (
+                    <span className="badge bg-emerald-50 text-emerald-800 border border-emerald-200 px-3.5 py-1.5 rounded-full text-xs font-bold" id="badge-debt-settled">
+                      Kiegyenlítve
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           )}
