@@ -24,12 +24,38 @@ export const ShareModal: React.FC<ShareModalProps> = ({
   settings,
   correction,
 }) => {
-  const [editMode, setEditMode] = useState<'none' | 'all' | 'empty'>('empty');
-  const [useDefaultAmount, setUseDefaultAmount] = useState(true);
-  const [defaultAmount, setDefaultAmount] = useState<string>('50 000');
+  const [editMode, setEditMode] = useState<'none' | 'all' | 'empty'>(() => {
+    return (localStorage.getItem('share_editMode') as 'none' | 'all' | 'empty') || 'empty';
+  });
+  const [useDefaultAmount, setUseDefaultAmount] = useState<boolean>(() => {
+    const stored = localStorage.getItem('share_useDefaultAmount');
+    return stored !== null ? stored === 'true' : true;
+  });
+  const [defaultSajátAmount, setDefaultSajátAmount] = useState<string>(() => {
+    return localStorage.getItem('share_defaultSajátAmount') || '50 000';
+  });
+  const [defaultKülsősAmount, setDefaultKülsősAmount] = useState<string>(() => {
+    return localStorage.getItem('share_defaultKülsősAmount') || '35 000';
+  });
   const [shareUrl, setShareUrl] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
+
+  useEffect(() => {
+    localStorage.setItem('share_editMode', editMode);
+  }, [editMode]);
+
+  useEffect(() => {
+    localStorage.setItem('share_useDefaultAmount', String(useDefaultAmount));
+  }, [useDefaultAmount]);
+
+  useEffect(() => {
+    localStorage.setItem('share_defaultSajátAmount', defaultSajátAmount);
+  }, [defaultSajátAmount]);
+
+  useEffect(() => {
+    localStorage.setItem('share_defaultKülsősAmount', defaultKülsősAmount);
+  }, [defaultKülsősAmount]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -37,7 +63,8 @@ export const ShareModal: React.FC<ShareModalProps> = ({
     setIsGenerating(true);
     compressShareState(transactions, settings, {
       editMode,
-      defaultAmount: useDefaultAmount ? parseNumber(defaultAmount) : null,
+      defaultSajátAmount: useDefaultAmount ? parseNumber(defaultSajátAmount) : null,
+      defaultKülsősAmount: useDefaultAmount ? parseNumber(defaultKülsősAmount) : null,
     }, correction)
       .then((compressed) => {
         const baseUrl = window.location.origin + window.location.pathname;
@@ -48,7 +75,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
         console.error('Hiba a megosztási URL generálása során:', err);
         setIsGenerating(false);
       });
-  }, [isOpen, transactions, settings, editMode, useDefaultAmount, defaultAmount, correction]);
+  }, [isOpen, transactions, settings, editMode, useDefaultAmount, defaultSajátAmount, defaultKülsősAmount, correction]);
 
   const handleCopy = async () => {
     try {
@@ -194,18 +221,35 @@ export const ShareModal: React.FC<ShareModalProps> = ({
               </label>
               
               {useDefaultAmount && (
-                <div className="flex items-center gap-3 animate-in slide-in-from-top-2 duration-150 pl-6">
-                  <div className="relative w-36 shrink-0">
-                    <input 
-                      type="text"
-                      value={defaultAmount}
-                      onChange={(e) => handleAmountInputChange(e.target.value, e.target.selectionStart || 0, setDefaultAmount, e.target)}
-                      className="w-full bg-white border border-gray-300 rounded-lg px-3 py-1.5 text-sm font-semibold font-mono text-right pr-8 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-semibold select-none">Ft</span>
+                <div className="space-y-3 pl-6 animate-in slide-in-from-top-2 duration-150">
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-xs font-semibold text-gray-650">Saját munkadíj:</span>
+                    <div className="relative w-36 shrink-0">
+                      <input 
+                        type="text"
+                        value={defaultSajátAmount}
+                        onChange={(e) => handleAmountInputChange(e.target.value, e.target.selectionStart || 0, setDefaultSajátAmount, e.target)}
+                        className="w-full bg-white border border-gray-300 rounded-lg px-3 py-1.5 text-sm font-semibold font-mono text-right pr-8 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-semibold select-none">Ft</span>
+                    </div>
                   </div>
+                  
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-xs font-semibold text-gray-650">Külsős munkadíj:</span>
+                    <div className="relative w-36 shrink-0">
+                      <input 
+                        type="text"
+                        value={defaultKülsősAmount}
+                        onChange={(e) => handleAmountInputChange(e.target.value, e.target.selectionStart || 0, setDefaultKülsősAmount, e.target)}
+                        className="w-full bg-white border border-gray-300 rounded-lg px-3 py-1.5 text-sm font-semibold font-mono text-right pr-8 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-semibold select-none">Ft</span>
+                    </div>
+                  </div>
+                  
                   <p className="text-xs text-gray-500">
-                    Szerkesztéskor ez az érték jelenik meg előre beírva, így elegendő egy Entert ütni a mentéshez.
+                    Szerkesztéskor a sor típusának megfelelő érték jelenik meg előre beírva, így elegendő egy Entert ütni a mentéshez.
                   </p>
                 </div>
               )}

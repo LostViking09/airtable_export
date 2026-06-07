@@ -24,7 +24,8 @@ interface TransactionRowProps {
   onDelete: () => void;
   isShared?: boolean;
   isEditable?: boolean;
-  defaultAmount?: number | null;
+  defaultSajátAmount?: number | null;
+  defaultKülsősAmount?: number | null;
   originalAmounts?: Record<string, number>;
 }
 
@@ -42,7 +43,8 @@ export const TransactionRow: React.FC<TransactionRowProps> = ({
   onDelete,
   isShared = false,
   isEditable = true,
-  defaultAmount = null,
+  defaultSajátAmount = null,
+  defaultKülsősAmount = null,
   originalAmounts,
 }) => {
   // Local edit states
@@ -63,13 +65,25 @@ export const TransactionRow: React.FC<TransactionRowProps> = ({
       setEditTipus(tx.tipus || '');
       isSavingRef.current = false;
       
-      if (isShared && tx.osszeg === 0 && defaultAmount !== null) {
-        setEditAmount(formatInputAmount(defaultAmount.toString()));
+      if (isShared && tx.osszeg === 0) {
+        const normTipus = (tx.tipus || '').trim().toLowerCase();
+        let defaultVal: number | null = null;
+        if (normTipus === 'saját munkadíj') {
+          defaultVal = defaultSajátAmount;
+        } else if (normTipus === 'továbbhárított munkadíj') {
+          defaultVal = defaultKülsősAmount;
+        }
+        
+        if (defaultVal !== null) {
+          setEditAmount(formatInputAmount(defaultVal.toString()));
+        } else {
+          setEditAmount(formatInputAmount(tx.osszeg.toString()));
+        }
       } else {
         setEditAmount(formatInputAmount(tx.osszeg.toString()));
       }
     }
-  }, [isEditing, tx, isShared, defaultAmount]);
+  }, [isEditing, tx, isShared, defaultSajátAmount, defaultKülsősAmount]);
 
 
   const handleSave = (dir?: 'next' | 'prev') => {

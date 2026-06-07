@@ -8,23 +8,77 @@ export function useTransactions() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [fileName, setFileName] = useState<string>('Nincs betöltött fájl');
   
+  const isSharedUrl = typeof window !== 'undefined' && window.location.hash.startsWith('#share=');
+
   // Settings/UI states
-  const [showSummary, setShowSummary] = useState(true);
-  const [userToggledSummary, setUserToggledSummary] = useState(false);
-  const [showTipus, setShowTipus] = useState(true);
-  const [showFtSuffix, setShowFtSuffix] = useState(true);
-  const [separateMunkadij, setSeparateMunkadij] = useState(true);
+  const [showSummary, setShowSummary] = useState(() => {
+    if (isSharedUrl) return true;
+    const stored = localStorage.getItem('view_showSummary');
+    return stored !== null ? stored === 'true' : true;
+  });
+  const [userToggledSummary, setUserToggledSummary] = useState(() => {
+    if (isSharedUrl) return true;
+    const stored = localStorage.getItem('view_userToggledSummary');
+    return stored !== null ? stored === 'true' : false;
+  });
+  const [showTipus, setShowTipus] = useState(() => {
+    if (isSharedUrl) return true;
+    const stored = localStorage.getItem('view_showTipus');
+    return stored !== null ? stored === 'true' : true;
+  });
+  const [showFtSuffix, setShowFtSuffix] = useState(() => {
+    if (isSharedUrl) return true;
+    const stored = localStorage.getItem('view_showFtSuffix');
+    return stored !== null ? stored === 'true' : true;
+  });
+  const [separateMunkadij, setSeparateMunkadij] = useState(() => {
+    if (isSharedUrl) return true;
+    const stored = localStorage.getItem('view_separateMunkadij');
+    return stored !== null ? stored === 'true' : true;
+  });
   const [correction, setCorrection] = useState<number>(0);
 
   // Shared view states
   const [isShared, setIsShared] = useState(false);
   const [shareOptions, setShareOptions] = useState<{
     editMode: 'none' | 'all' | 'empty';
-    defaultAmount: number | null;
-  }>({ editMode: 'none', defaultAmount: null });
+    defaultSajátAmount: number | null;
+    defaultKülsősAmount: number | null;
+  }>({ editMode: 'none', defaultSajátAmount: null, defaultKülsősAmount: null });
   const [originalEmptyIds, setOriginalEmptyIds] = useState<Set<string>>(new Set());
   const [originalAmounts, setOriginalAmounts] = useState<Record<string, number>>({});
   const [isLoadingShared, setIsLoadingShared] = useState(false);
+
+  // Save Settings/UI states to localStorage if NOT a shared URL
+  useEffect(() => {
+    if (!isShared && !window.location.hash.startsWith('#share=')) {
+      localStorage.setItem('view_showSummary', String(showSummary));
+    }
+  }, [showSummary, isShared]);
+
+  useEffect(() => {
+    if (!isShared && !window.location.hash.startsWith('#share=')) {
+      localStorage.setItem('view_userToggledSummary', String(userToggledSummary));
+    }
+  }, [userToggledSummary, isShared]);
+
+  useEffect(() => {
+    if (!isShared && !window.location.hash.startsWith('#share=')) {
+      localStorage.setItem('view_showTipus', String(showTipus));
+    }
+  }, [showTipus, isShared]);
+
+  useEffect(() => {
+    if (!isShared && !window.location.hash.startsWith('#share=')) {
+      localStorage.setItem('view_showFtSuffix', String(showFtSuffix));
+    }
+  }, [showFtSuffix, isShared]);
+
+  useEffect(() => {
+    if (!isShared && !window.location.hash.startsWith('#share=')) {
+      localStorage.setItem('view_separateMunkadij', String(separateMunkadij));
+    }
+  }, [separateMunkadij, isShared]);
 
   // Load shared state from hash on mount
   useEffect(() => {

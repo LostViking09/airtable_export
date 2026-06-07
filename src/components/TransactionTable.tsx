@@ -18,7 +18,8 @@ interface TransactionTableProps {
   isShared?: boolean;
   shareOptions?: {
     editMode: 'none' | 'all' | 'empty';
-    defaultAmount: number | null;
+    defaultSajátAmount: number | null;
+    defaultKülsősAmount: number | null;
   };
   originalEmptyIds?: Set<string>;
   originalAmounts?: Record<string, number>;
@@ -74,7 +75,8 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
           onDelete={() => onDelete(tx.id)}
           isShared={isShared}
           isEditable={isEditable}
-          defaultAmount={shareOptions?.defaultAmount}
+          defaultSajátAmount={shareOptions?.defaultSajátAmount}
+          defaultKülsősAmount={shareOptions?.defaultKülsősAmount}
           originalAmounts={originalAmounts}
         />
       );

@@ -3,7 +3,7 @@ import { Transaction } from '../types';
 interface CompressedState {
   t: [string, string, string, string, number, string][]; // datum, kategoria, megnevezes, tipus, osszeg, id
   s: [boolean, boolean, boolean, boolean]; // showSummary, showTipus, separateMunkadij, showFtSuffix
-  o: [string, number | null]; // editMode ('none' | 'all' | 'empty'), defaultAmount
+  o: [string, number | null, (number | null)?]; // editMode ('none' | 'all' | 'empty'), defaultSajátAmount, defaultKülsősAmount
   c?: number; // correction (optional)
 }
 
@@ -45,14 +45,15 @@ export async function compressShareState(
   },
   options: {
     editMode: 'none' | 'all' | 'empty';
-    defaultAmount: number | null;
+    defaultSajátAmount: number | null;
+    defaultKülsősAmount: number | null;
   },
   correction: number
 ): Promise<string> {
   const compressed: CompressedState = {
     t: transactions.map(t => [t.datum, t.kategoria, t.megnevezes, t.tipus || '', t.osszeg, t.id]),
     s: [settings.showSummary, settings.showTipus, settings.separateMunkadij, settings.showFtSuffix],
-    o: [options.editMode, options.defaultAmount],
+    o: [options.editMode, options.defaultSajátAmount, options.defaultKülsősAmount],
     c: correction
   };
 
@@ -84,7 +85,8 @@ export async function decompressShareState(hash: string): Promise<{
   };
   options: {
     editMode: 'none' | 'all' | 'empty';
-    defaultAmount: number | null;
+    defaultSajátAmount: number | null;
+    defaultKülsősAmount: number | null;
   };
   correction: number;
 } | null> {
@@ -132,7 +134,8 @@ export async function decompressShareState(hash: string): Promise<{
       },
       options: {
         editMode: parsed.o[0] as 'none' | 'all' | 'empty',
-        defaultAmount: parsed.o[1]
+        defaultSajátAmount: parsed.o[1],
+        defaultKülsősAmount: parsed.o.length > 2 ? (parsed.o[2] ?? null) : parsed.o[1]
       },
       correction: parsed.c ?? 0
     };
