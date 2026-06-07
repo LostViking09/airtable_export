@@ -67,14 +67,6 @@ export function buildClipboardContent(options: ClipboardOptions) {
     tsvContent = tsvRows.join('\n');
   }
   
-  let badgeHtml = '';
-  if (totalAmount > 0) {
-    badgeHtml = `<span style="color: #b45309; font-weight: bold;">Botond tartozik</span>`;
-  } else if (totalAmount < 0) {
-    badgeHtml = `<span style="color: #1d4ed8; font-weight: bold;">Partner tartozik</span>`;
-  } else {
-    badgeHtml = `<span style="color: #15803d; font-weight: bold;">Kiegyenlítve</span>`;
-  }
 
   const colSpanNum = showTipus ? 4 : 3;
   const colSpanTotal = showTipus ? 5 : 4;
@@ -131,12 +123,6 @@ export function buildClipboardContent(options: ClipboardOptions) {
           <td colspan="${colSpanNum}" style="padding: 14px 16px; text-align: right; font-size: 13px; font-weight: bold; color: #111827; border: 1px solid #e5e7eb; white-space: nowrap;">${hasTypes ? 'Mindösszesen:' : 'Összesen:'}</td>
           <td style="padding: 14px 16px; font-size: 18px; font-family: monospace; text-align: right; font-weight: 900; color: #111827; border: 1px solid #e5e7eb; white-space: nowrap;">
             ${formatOsszeg(totalAmount)}${showFtSuffix ? ' Ft' : ''}
-          </td>
-        </tr>
-        <tr style="background-color: #f9fafb;">
-          <td colspan="${colSpanNum}" style="padding: 10px 16px; text-align: right; font-size: 13px; font-weight: bold; color: #374151; border: 1px solid #e5e7eb; white-space: nowrap;">Állapot:</td>
-          <td style="padding: 10px 16px; text-align: right; border: 1px solid #e5e7eb; white-space: nowrap;">
-            ${badgeHtml}
           </td>
         </tr>
       </tfoot>

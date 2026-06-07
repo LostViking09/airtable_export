@@ -155,22 +155,6 @@ export const SummaryFooter: React.FC<SummaryFooterProps> = ({
                 {showFtSuffix && <span className="text-sm font-bold text-gray-500 ml-1">Ft</span>}
               </span>
             </div>
-            
-            <div className="whitespace-nowrap">
-              {totalAmount > 0 ? (
-                <span className="badge bg-amber-50 text-amber-800 border border-amber-200 px-3.5 py-1.5 rounded-full text-xs font-bold" id="badge-debt-botond">
-                  Botond tartozik
-                </span>
-              ) : totalAmount < 0 ? (
-                <span className="badge bg-blue-50 text-blue-800 border border-blue-200 px-3.5 py-1.5 rounded-full text-xs font-bold" id="badge-debt-partner">
-                  Partner tartozik
-                </span>
-              ) : (
-                <span className="badge bg-emerald-50 text-emerald-800 border border-emerald-200 px-3.5 py-1.5 rounded-full text-xs font-bold" id="badge-debt-settled">
-                  Kiegyenlítve
-                </span>
-              )}
-            </div>
           </div>
         </div>
       )}
