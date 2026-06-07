@@ -299,7 +299,7 @@ export const TransactionRow: React.FC<TransactionRowProps> = ({
             title={isEditable ? 'Kattintson az összeg módosításához' : undefined}
           >
             {tx.osszeg === 0 ? (
-              <span className={`${isEditable ? 'text-gray-400 font-normal border-b border-dashed border-gray-300 pb-0.5' : 'text-gray-300 font-normal'} select-none`}>
+              <span className={`${isEditable ? 'text-gray-400 font-normal border-b border-dashed border-gray-300 pb-0.5' : 'text-gray-300 font-normal'} select-none print:hidden`}>
                 {isEditable ? 'Összeg megadása' : '-'}
               </span>
             ) : (
