@@ -28,6 +28,7 @@ export default function App() {
     totalAmount,
     mainTotalAmount,
     munkadijTotalAmount,
+    typeSummaries,
     addTransaction,
     updateTransaction,
     deleteTransaction,
@@ -271,9 +272,7 @@ export default function App() {
           onToggleSeparateMunkadij={() => setSeparateMunkadij(!separateMunkadij)}
           showFtSuffix={showFtSuffix}
           onToggleFtSuffix={() => setShowFtSuffix(!showFtSuffix)}
-          hasMunkadij={munkadijTransactions.length > 0}
-          mainTotalAmount={mainTotalAmount}
-          munkadijTotalAmount={munkadijTotalAmount}
+          typeSummaries={typeSummaries}
           totalAmount={totalAmount}
         />
 

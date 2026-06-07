@@ -3,7 +3,8 @@ import {
   formatOsszeg, 
   formatDatumWithDay, 
   formatDescriptionForHTML, 
-  formatTipusForHTML 
+  formatTipusForHTML,
+  getTypeSummaries
 } from './format';
 
 interface ClipboardOptions {
@@ -111,53 +112,35 @@ export function buildClipboardContent(options: ClipboardOptions) {
 
   let tfootHtml = '';
   if (showSummary) {
-    if (separateMunkadij && munkadijTransactions.length > 0) {
-      tfootHtml = `
-        <tfoot>
-          <tr style="background-color: #f9fafb; border-top: 2px solid #e5e7eb;">
-            <td colspan="${colSpanNum}" style="padding: 10px 16px; text-align: right; font-size: 12px; color: #6b7280; border: 1px solid #e5e7eb; white-space: nowrap;">Egyéb tételek összesen:</td>
-            <td style="padding: 10px 16px; font-size: 13px; font-family: monospace; text-align: right; font-weight: 600; color: #374151; border: 1px solid #e5e7eb; white-space: nowrap;">
-              ${formatOsszeg(mainTotalAmount)}${showFtSuffix ? ' Ft' : ''}
-            </td>
-          </tr>
-          <tr style="background-color: #f9fafb;">
-            <td colspan="${colSpanNum}" style="padding: 10px 16px; text-align: right; font-size: 12px; color: #6b7280; border: 1px solid #e5e7eb; white-space: nowrap;">Munkadíj összesen:</td>
-            <td style="padding: 10px 16px; font-size: 13px; font-family: monospace; text-align: right; font-weight: 600; color: #374151; border: 1px solid #e5e7eb; white-space: nowrap;">
-              ${formatOsszeg(munkadijTotalAmount)}${showFtSuffix ? ' Ft' : ''}
-            </td>
-          </tr>
-          <tr style="background-color: #f9fafb; border-top: 1.5px solid #d1d5db;">
-            <td colspan="${colSpanNum}" style="padding: 14px 16px; text-align: right; font-size: 13px; font-weight: bold; color: #111827; border: 1px solid #e5e7eb; white-space: nowrap;">Mindösszesen:</td>
-            <td style="padding: 14px 16px; font-size: 18px; font-family: monospace; text-align: right; font-weight: 900; color: #111827; border: 1px solid #e5e7eb; white-space: nowrap;">
-              ${formatOsszeg(totalAmount)}${showFtSuffix ? ' Ft' : ''}
-            </td>
-          </tr>
-          <tr style="background-color: #f9fafb;">
-            <td colspan="${colSpanNum}" style="padding: 10px 16px; text-align: right; font-size: 13px; font-weight: bold; color: #374151; border: 1px solid #e5e7eb; white-space: nowrap;">Állapot:</td>
-            <td style="padding: 10px 16px; text-align: right; border: 1px solid #e5e7eb; white-space: nowrap;">
-              ${badgeHtml}
-            </td>
-          </tr>
-        </tfoot>
-      `;
-    } else {
-      tfootHtml = `
-        <tfoot>
-          <tr style="background-color: #f9fafb; border-top: 2px solid #e5e7eb;">
-            <td colspan="${colSpanNum}" style="padding: 14px 16px; text-align: right; font-size: 13px; font-weight: bold; color: #374151; border: 1px solid #e5e7eb; white-space: nowrap;">Összesen:</td>
-            <td style="padding: 14px 16px; font-size: 18px; font-family: monospace; text-align: right; font-weight: 900; color: #111827; border: 1px solid #e5e7eb; white-space: nowrap;">
-              ${formatOsszeg(totalAmount)}${showFtSuffix ? ' Ft' : ''}
-            </td>
-          </tr>
-          <tr style="background-color: #f9fafb;">
-            <td colspan="${colSpanNum}" style="padding: 10px 16px; text-align: right; font-size: 13px; font-weight: bold; color: #374151; border: 1px solid #e5e7eb; white-space: nowrap;">Állapot:</td>
-            <td style="padding: 10px 16px; text-align: right; border: 1px solid #e5e7eb; white-space: nowrap;">
-              ${badgeHtml}
-            </td>
-          </tr>
-        </tfoot>
-      `;
-    }
+    const typeSummaries = getTypeSummaries(transactions);
+    const hasTypes = typeSummaries.length > 0;
+    
+    const typeRows = typeSummaries.map((summary) => `
+      <tr style="background-color: #f9fafb;">
+        <td colspan="${colSpanNum}" style="padding: 10px 16px; text-align: right; font-size: 12px; color: #6b7280; border: 1px solid #e5e7eb; white-space: nowrap;">${summary.label}:</td>
+        <td style="padding: 10px 16px; font-size: 13px; font-family: monospace; text-align: right; font-weight: 600; color: #374151; border: 1px solid #e5e7eb; white-space: nowrap;">
+          ${formatOsszeg(summary.amount)}${showFtSuffix ? ' Ft' : ''}
+        </td>
+      </tr>
+    `).join('');
+
+    tfootHtml = `
+      <tfoot>
+        ${typeRows}
+        <tr style="background-color: #f9fafb; border-top: 1.5px solid #d1d5db;">
+          <td colspan="${colSpanNum}" style="padding: 14px 16px; text-align: right; font-size: 13px; font-weight: bold; color: #111827; border: 1px solid #e5e7eb; white-space: nowrap;">${hasTypes ? 'Mindösszesen:' : 'Összesen:'}</td>
+          <td style="padding: 14px 16px; font-size: 18px; font-family: monospace; text-align: right; font-weight: 900; color: #111827; border: 1px solid #e5e7eb; white-space: nowrap;">
+            ${formatOsszeg(totalAmount)}${showFtSuffix ? ' Ft' : ''}
+          </td>
+        </tr>
+        <tr style="background-color: #f9fafb;">
+          <td colspan="${colSpanNum}" style="padding: 10px 16px; text-align: right; font-size: 13px; font-weight: bold; color: #374151; border: 1px solid #e5e7eb; white-space: nowrap;">Állapot:</td>
+          <td style="padding: 10px 16px; text-align: right; border: 1px solid #e5e7eb; white-space: nowrap;">
+            ${badgeHtml}
+          </td>
+        </tr>
+      </tfoot>
+    `;
   }
 
   const htmlContent = `

@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Transaction } from '../types';
 import { parseCSV } from '../utils/csv';
-import { parseNumber } from '../utils/format';
+import { parseNumber, getTypeSummaries } from '../utils/format';
 import { decompressShareState } from '../utils/share';
 
 export function useTransactions() {
@@ -101,6 +101,10 @@ export function useTransactions() {
     return munkadijTransactions.reduce((acc, t) => acc + t.osszeg, 0);
   }, [munkadijTransactions]);
 
+  const typeSummaries = useMemo(() => {
+    return getTypeSummaries(filteredTransactions);
+  }, [filteredTransactions]);
+
   // CRUD actions
   const addTransaction = (newTx: Omit<Transaction, 'id'>) => {
     const tx: Transaction = {
@@ -174,6 +178,7 @@ export function useTransactions() {
     totalAmount,
     mainTotalAmount,
     munkadijTotalAmount,
+    typeSummaries,
 
     // Shared state
     isShared,

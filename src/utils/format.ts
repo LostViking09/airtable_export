@@ -1,3 +1,5 @@
+import { Transaction } from '../types';
+
 export function parseNumber(val: string): number {
   if (!val) return 0;
   // Strip all alphabetical characters (includes HUF, Ft, HUF, EUR, etc.) case-insensitive & Hungarian accents
@@ -127,4 +129,32 @@ export function formatDescriptionForHTML(desc: string): string {
     }
     return part.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }).join('');
+}
+
+export interface TypeSummary {
+  label: string;
+  amount: number;
+}
+
+export function getTypeSummaries(transactions: Transaction[]): TypeSummary[] {
+  const groups: { [key: string]: number } = {};
+  
+  transactions.forEach(t => {
+    let rawType = (t.tipus || '').trim();
+    if (!rawType) {
+      rawType = 'Típus nélkül';
+    }
+    
+    let key = rawType;
+    const normalizedType = rawType.toLowerCase();
+    if (normalizedType === 'továbbhárított költség') {
+      key = t.osszeg < 0 ? 'Továbbhárított költség -' : 'Továbbhárított költség +';
+    }
+    
+    groups[key] = (groups[key] || 0) + t.osszeg;
+  });
+
+  return Object.entries(groups)
+    .map(([label, amount]) => ({ label, amount }))
+    .sort((a, b) => a.label.localeCompare(b.label, 'hu'));
 }

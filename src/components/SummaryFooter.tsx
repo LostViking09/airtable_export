@@ -1,5 +1,5 @@
 import React from 'react';
-import { formatOsszeg } from '../utils/format';
+import { formatOsszeg, TypeSummary } from '../utils/format';
 
 interface SummaryFooterProps {
   showSummary: boolean;
@@ -10,9 +10,7 @@ interface SummaryFooterProps {
   onToggleSeparateMunkadij: () => void;
   showFtSuffix: boolean;
   onToggleFtSuffix: () => void;
-  hasMunkadij: boolean;
-  mainTotalAmount: number;
-  munkadijTotalAmount: number;
+  typeSummaries: TypeSummary[];
   totalAmount: number;
 }
 
@@ -25,9 +23,7 @@ export const SummaryFooter: React.FC<SummaryFooterProps> = ({
   onToggleSeparateMunkadij,
   showFtSuffix,
   onToggleFtSuffix,
-  hasMunkadij,
-  mainTotalAmount,
-  munkadijTotalAmount,
+  typeSummaries,
   totalAmount,
 }) => {
   return (
@@ -135,29 +131,24 @@ export const SummaryFooter: React.FC<SummaryFooterProps> = ({
       {/* Sum value and corresponding badges */}
       {showSummary && (
         <div className="flex flex-col sm:flex-row items-center flex-wrap gap-x-6 gap-y-3 justify-end w-full sm:w-auto text-right" id="totals-container">
-          {separateMunkadij && hasMunkadij ? (
-            <div className="flex flex-col gap-1 text-xs text-gray-500 font-medium w-full sm:w-auto border-r-0 sm:border-r border-gray-200 pr-0 sm:pr-6 mr-0 sm:mr-1">
-              <div className="flex justify-between sm:justify-end gap-4 whitespace-nowrap">
-                <span>Egyéb tételek:</span>
-                <span className="font-semibold font-mono text-gray-900">
-                  {formatOsszeg(mainTotalAmount)}
-                  {showFtSuffix && <span className="text-[10px] text-gray-400 font-normal ml-0.5">Ft</span>}
-                </span>
-              </div>
-              <div className="flex justify-between sm:justify-end gap-4 whitespace-nowrap">
-                <span>Munkadíj:</span>
-                <span className="font-semibold font-mono text-gray-900">
-                  {formatOsszeg(munkadijTotalAmount)}
-                  {showFtSuffix && <span className="text-[10px] text-gray-400 font-normal ml-0.5">Ft</span>}
-                </span>
-              </div>
+          {typeSummaries.length > 0 ? (
+            <div className="grid grid-cols-[1fr_auto] sm:grid-cols-[auto_auto] gap-x-4 gap-y-1.5 text-xs text-gray-500 font-medium w-full sm:w-auto border-b sm:border-b-0 sm:border-r border-gray-200 pb-3 sm:pb-0 pr-0 sm:pr-6 mr-0 sm:mr-1">
+              {typeSummaries.map((summary) => (
+                <React.Fragment key={summary.label}>
+                  <span className="text-left sm:text-right">{summary.label}:</span>
+                  <span className="font-semibold font-mono text-gray-900 text-right">
+                    {formatOsszeg(summary.amount)}
+                    {showFtSuffix && <span className="text-[10px] text-gray-400 font-normal ml-0.5">Ft</span>}
+                  </span>
+                </React.Fragment>
+              ))}
             </div>
           ) : null}
 
           <div className="flex items-center gap-4 justify-between sm:justify-end w-full sm:w-auto">
             <div className="whitespace-nowrap">
               <span className="text-xs font-bold uppercase tracking-wider text-gray-400 mr-2">
-                {separateMunkadij && hasMunkadij ? 'Mindösszesen:' : 'Összesen:'}
+                {typeSummaries.length > 0 ? 'Mindösszesen:' : 'Összesen:'}
               </span>
               <span className="text-2xl font-black font-mono text-gray-950">
                 {formatOsszeg(totalAmount)}
