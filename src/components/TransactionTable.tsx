@@ -41,7 +41,7 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
   originalEmptyIds,
   originalAmounts,
 }) => {
-  const showActionsColumn = !isShared || (shareOptions && shareOptions.editMode !== 'none');
+  const showActionsColumn = !isShared;
 
   const renderRows = (list: Transaction[], listOffset = 0) => {
     return list.map((tx, idx) => {
