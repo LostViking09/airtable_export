@@ -56,3 +56,8 @@
   border-bottom: 1.5px solid #bfdbfe;
 }
 
+/* Ensure amount columns and headers never wrap */
+.amount-cell, .amount-header {
+  white-space: nowrap !important;
+}
+

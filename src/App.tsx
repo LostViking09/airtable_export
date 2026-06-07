@@ -441,7 +441,7 @@ export default function App() {
             <td style="padding: 12px 14px; font-size: 13px; font-weight: bold; color: #111827; border: 1px solid #e5e7eb; ${borderBottomStyle}">${t.kategoria}</td>
             <td style="padding: 12px 14px; font-size: 13px; color: #374151; border: 1px solid #e5e7eb; ${borderBottomStyle}">${formatDescriptionForHTML(t.megnevezes)}</td>
             ${showTipus ? `<td style="padding: 12px 14px; font-size: 13px; border: 1px solid #e5e7eb; ${borderBottomStyle}">${formatTipusForHTML(t.tipus, t.osszeg)}</td>` : ''}
-            <td style="padding: 12px 14px; font-size: 13px; font-family: monospace; text-align: right; font-weight: 600; color: ${t.osszeg < 0 ? '#059669' : '#111827'}; border: 1px solid #e5e7eb; ${borderBottomStyle}">
+            <td style="padding: 12px 14px; font-size: 13px; font-family: monospace; text-align: right; font-weight: 600; color: ${t.osszeg < 0 ? '#059669' : '#111827'}; border: 1px solid #e5e7eb; white-space: nowrap; ${borderBottomStyle}">
               ${t.osszeg === 0 ? '<span style="color: #9ca3af;">-</span>' : (formatOsszeg(t.osszeg) + (showFtSuffix ? ' <span style="color: #9ca3af; font-size: 11px;">Ft</span>' : ''))}
             </td>
           </tr>
@@ -467,26 +467,26 @@ export default function App() {
           tfootHtml = `
             <tfoot>
               <tr style="background-color: #f9fafb; border-top: 2px solid #e5e7eb;">
-                <td colspan="${colSpanNum}" style="padding: 10px 16px; text-align: right; font-size: 12px; color: #6b7280; border: 1px solid #e5e7eb;">Egyéb tételek összesen:</td>
-                <td style="padding: 10px 16px; font-size: 13px; font-family: monospace; text-align: right; font-weight: 600; color: #374151; border: 1px solid #e5e7eb;">
+                <td colspan="${colSpanNum}" style="padding: 10px 16px; text-align: right; font-size: 12px; color: #6b7280; border: 1px solid #e5e7eb; white-space: nowrap;">Egyéb tételek összesen:</td>
+                <td style="padding: 10px 16px; font-size: 13px; font-family: monospace; text-align: right; font-weight: 600; color: #374151; border: 1px solid #e5e7eb; white-space: nowrap;">
                   ${formatOsszeg(mainTotalAmount)}${showFtSuffix ? ' Ft' : ''}
                 </td>
               </tr>
               <tr style="background-color: #f9fafb;">
-                <td colspan="${colSpanNum}" style="padding: 10px 16px; text-align: right; font-size: 12px; color: #6b7280; border: 1px solid #e5e7eb;">Munkadíj összesen:</td>
-                <td style="padding: 10px 16px; font-size: 13px; font-family: monospace; text-align: right; font-weight: 600; color: #374151; border: 1px solid #e5e7eb;">
+                <td colspan="${colSpanNum}" style="padding: 10px 16px; text-align: right; font-size: 12px; color: #6b7280; border: 1px solid #e5e7eb; white-space: nowrap;">Munkadíj összesen:</td>
+                <td style="padding: 10px 16px; font-size: 13px; font-family: monospace; text-align: right; font-weight: 600; color: #374151; border: 1px solid #e5e7eb; white-space: nowrap;">
                   ${formatOsszeg(munkadijTotalAmount)}${showFtSuffix ? ' Ft' : ''}
                 </td>
               </tr>
               <tr style="background-color: #f9fafb; border-top: 1.5px solid #d1d5db;">
-                <td colspan="${colSpanNum}" style="padding: 14px 16px; text-align: right; font-size: 13px; font-weight: bold; color: #111827; border: 1px solid #e5e7eb;">Mindösszesen:</td>
-                <td style="padding: 14px 16px; font-size: 18px; font-family: monospace; text-align: right; font-weight: 900; color: #111827; border: 1px solid #e5e7eb;">
+                <td colspan="${colSpanNum}" style="padding: 14px 16px; text-align: right; font-size: 13px; font-weight: bold; color: #111827; border: 1px solid #e5e7eb; white-space: nowrap;">Mindösszesen:</td>
+                <td style="padding: 14px 16px; font-size: 18px; font-family: monospace; text-align: right; font-weight: 900; color: #111827; border: 1px solid #e5e7eb; white-space: nowrap;">
                   ${formatOsszeg(totalAmount)}${showFtSuffix ? ' Ft' : ''}
                 </td>
               </tr>
               <tr style="background-color: #f9fafb;">
-                <td colspan="${colSpanNum}" style="padding: 10px 16px; text-align: right; font-size: 13px; font-weight: bold; color: #374151; border: 1px solid #e5e7eb;">Állapot:</td>
-                <td style="padding: 10px 16px; text-align: right; border: 1px solid #e5e7eb;">
+                <td colspan="${colSpanNum}" style="padding: 10px 16px; text-align: right; font-size: 13px; font-weight: bold; color: #374151; border: 1px solid #e5e7eb; white-space: nowrap;">Állapot:</td>
+                <td style="padding: 10px 16px; text-align: right; border: 1px solid #e5e7eb; white-space: nowrap;">
                   ${badgeHtml}
                 </td>
               </tr>
@@ -496,14 +496,14 @@ export default function App() {
           tfootHtml = `
             <tfoot>
               <tr style="background-color: #f9fafb; border-top: 2px solid #e5e7eb;">
-                <td colspan="${colSpanNum}" style="padding: 14px 16px; text-align: right; font-size: 13px; font-weight: bold; color: #374151; border: 1px solid #e5e7eb;">Összesen:</td>
-                <td style="padding: 14px 16px; font-size: 18px; font-family: monospace; text-align: right; font-weight: 900; color: #111827; border: 1px solid #e5e7eb;">
+                <td colspan="${colSpanNum}" style="padding: 14px 16px; text-align: right; font-size: 13px; font-weight: bold; color: #374151; border: 1px solid #e5e7eb; white-space: nowrap;">Összesen:</td>
+                <td style="padding: 14px 16px; font-size: 18px; font-family: monospace; text-align: right; font-weight: 900; color: #111827; border: 1px solid #e5e7eb; white-space: nowrap;">
                   ${formatOsszeg(totalAmount)}${showFtSuffix ? ' Ft' : ''}
                 </td>
               </tr>
               <tr style="background-color: #f9fafb;">
-                <td colspan="${colSpanNum}" style="padding: 10px 16px; text-align: right; font-size: 13px; font-weight: bold; color: #374151; border: 1px solid #e5e7eb;">Állapot:</td>
-                <td style="padding: 10px 16px; text-align: right; border: 1px solid #e5e7eb;">
+                <td colspan="${colSpanNum}" style="padding: 10px 16px; text-align: right; font-size: 13px; font-weight: bold; color: #374151; border: 1px solid #e5e7eb; white-space: nowrap;">Állapot:</td>
+                <td style="padding: 10px 16px; text-align: right; border: 1px solid #e5e7eb; white-space: nowrap;">
                   ${badgeHtml}
                 </td>
               </tr>
@@ -520,7 +520,7 @@ export default function App() {
               <th style="padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; border: 1px solid #e5e7eb;">Rendezvény</th>
               <th style="padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; border: 1px solid #e5e7eb;">Megnevezés</th>
               ${showTipus ? `<th style="padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; border: 1px solid #e5e7eb;">Típus</th>` : ''}
-              <th style="padding: 10px 14px; text-align: right; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; border: 1px solid #e5e7eb;">Összeg ${showFtSuffix ? '(Ft)' : ''}</th>
+              <th style="padding: 10px 14px; text-align: right; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; border: 1px solid #e5e7eb; white-space: nowrap;">Összeg ${showFtSuffix ? '(Ft)' : ''}</th>
             </tr>
           </thead>
           <tbody>
@@ -752,7 +752,7 @@ export default function App() {
                   )}
                 </td>
               )}
-              <td className={`px-6 py-3.5 text-sm amount-cell text-right ${tx.osszeg < 0 ? 'neg font-bold' : 'text-gray-900 font-bold'} font-mono`}>
+              <td className={`px-6 py-3.5 text-sm amount-cell text-right ${tx.osszeg < 0 ? 'neg font-bold' : 'text-gray-900 font-bold'} font-mono whitespace-nowrap`}>
                 {tx.osszeg === 0 ? (
                   <span className="text-gray-300 font-normal select-none">-</span>
                 ) : (
@@ -1026,7 +1026,7 @@ export default function App() {
                     <th className="text-left font-semibold text-[11px] uppercase tracking-wider text-gray-500 px-6 py-4">Rendezvény</th>
                     <th className="text-left font-semibold text-[11px] uppercase tracking-wider text-gray-500 px-6 py-4">Megnevezés</th>
                     {showTipus && <th className="text-left font-semibold text-[11px] uppercase tracking-wider text-gray-500 px-6 py-4">Típus</th>}
-                    <th className="text-right font-semibold text-[11px] uppercase tracking-wider text-gray-500 px-6 py-4">Összeg {showFtSuffix ? '(Ft)' : ''}</th>
+                    <th className="text-right font-semibold text-[11px] uppercase tracking-wider text-gray-500 px-6 py-4 whitespace-nowrap amount-header">Összeg {showFtSuffix ? '(Ft)' : ''}</th>
                     <th className="no-print text-center font-semibold text-[11px] uppercase tracking-wider text-gray-500 px-6 py-4 w-24">Műveletek</th>
                   </tr>
                 </thead>
@@ -1154,14 +1154,14 @@ export default function App() {
             <div className="flex flex-col sm:flex-row items-center flex-wrap gap-x-6 gap-y-3 justify-end w-full sm:w-auto text-right" id="totals-container">
               {separateMunkadij && munkadijTransactions.length > 0 ? (
                 <div className="flex flex-col gap-1 text-xs text-gray-500 font-medium w-full sm:w-auto border-r-0 sm:border-r border-gray-200 pr-0 sm:pr-6 mr-0 sm:mr-1">
-                  <div className="flex justify-between sm:justify-end gap-4">
+                  <div className="flex justify-between sm:justify-end gap-4 whitespace-nowrap">
                     <span>Egyéb tételek:</span>
                     <span className="font-semibold font-mono text-gray-900">
                       {formatOsszeg(mainTotalAmount)}
                       {showFtSuffix && <span className="text-[10px] text-gray-400 font-normal ml-0.5">Ft</span>}
                     </span>
                   </div>
-                  <div className="flex justify-between sm:justify-end gap-4">
+                  <div className="flex justify-between sm:justify-end gap-4 whitespace-nowrap">
                     <span>Munkadíj:</span>
                     <span className="font-semibold font-mono text-gray-900">
                       {formatOsszeg(munkadijTotalAmount)}
@@ -1172,7 +1172,7 @@ export default function App() {
               ) : null}
 
               <div className="flex items-center gap-4 justify-between sm:justify-end w-full sm:w-auto">
-                <div>
+                <div className="whitespace-nowrap">
                   <span className="text-xs font-bold uppercase tracking-wider text-gray-400 mr-2">
                     {separateMunkadij && munkadijTransactions.length > 0 ? 'Mindösszesen:' : 'Összesen:'}
                   </span>
@@ -1182,7 +1182,7 @@ export default function App() {
                   </span>
                 </div>
                 
-                <div>
+                <div className="whitespace-nowrap">
                   {totalAmount > 0 ? (
                     <span className="badge bg-amber-50 text-amber-800 border border-amber-200 px-3.5 py-1.5 rounded-full text-xs font-bold" id="badge-debt-botond">
                       Botond tartozik
