@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Copy, Check, Share2, Settings, AlertCircle } from 'lucide-react';
 import { Transaction } from '../types';
 import { compressShareState } from '../utils/share';
+import { parseNumber, handleAmountInputChange } from '../utils/format';
 
 interface ShareModalProps {
   isOpen: boolean;
@@ -25,7 +26,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
 }) => {
   const [editMode, setEditMode] = useState<'none' | 'all' | 'empty'>('empty');
   const [useDefaultAmount, setUseDefaultAmount] = useState(true);
-  const [defaultAmount, setDefaultAmount] = useState<number>(50000);
+  const [defaultAmount, setDefaultAmount] = useState<string>('50 000');
   const [shareUrl, setShareUrl] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
@@ -36,7 +37,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
     setIsGenerating(true);
     compressShareState(transactions, settings, {
       editMode,
-      defaultAmount: useDefaultAmount ? defaultAmount : null,
+      defaultAmount: useDefaultAmount ? parseNumber(defaultAmount) : null,
     }, correction)
       .then((compressed) => {
         const baseUrl = window.location.origin + window.location.pathname;
@@ -105,7 +106,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
               </div>
               <div className="flex items-center gap-2">
                 <span className={`w-2 h-2 rounded-full ${settings.separateMunkadij ? 'bg-emerald-500' : 'bg-gray-300'}`} />
-                <span>Munkadíj külön: {settings.separateMunkadij ? 'Igen' : 'Nem'}</span>
+                <span>Külsős munkadíj külön: {settings.separateMunkadij ? 'Igen' : 'Nem'}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className={`w-2 h-2 rounded-full ${settings.showFtSuffix ? 'bg-emerald-500' : 'bg-gray-300'}`} />
@@ -196,9 +197,9 @@ export const ShareModal: React.FC<ShareModalProps> = ({
                 <div className="flex items-center gap-3 animate-in slide-in-from-top-2 duration-150 pl-6">
                   <div className="relative w-36 shrink-0">
                     <input 
-                      type="number"
-                      value={defaultAmount || ''}
-                      onChange={(e) => setDefaultAmount(Number(e.target.value))}
+                      type="text"
+                      value={defaultAmount}
+                      onChange={(e) => handleAmountInputChange(e.target.value, e.target.selectionStart || 0, setDefaultAmount, e.target)}
                       className="w-full bg-white border border-gray-300 rounded-lg px-3 py-1.5 text-sm font-semibold font-mono text-right pr-8 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-semibold select-none">Ft</span>

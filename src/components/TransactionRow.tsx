@@ -5,7 +5,9 @@ import {
   formatDatumWithDay, 
   formatOsszeg, 
   getTipusBadgeClasses, 
-  parseNumber 
+  parseNumber,
+  formatInputAmount,
+  handleAmountInputChange
 } from '../utils/format';
 
 interface TransactionRowProps {
@@ -50,7 +52,7 @@ export const TransactionRow: React.FC<TransactionRowProps> = ({
   const [editCategory, setEditCategory] = useState(tx.kategoria);
   const [editDescription, setEditDescription] = useState(tx.megnevezes);
   const [editTipus, setEditTipus] = useState(tx.tipus || '');
-  const [editAmount, setEditAmount] = useState(tx.osszeg.toString());
+  const [editAmount, setEditAmount] = useState(formatInputAmount(tx.osszeg.toString()));
 
   // Reset local states when edit starts or tx changes
   useEffect(() => {
@@ -62,9 +64,9 @@ export const TransactionRow: React.FC<TransactionRowProps> = ({
       isSavingRef.current = false;
       
       if (isShared && tx.osszeg === 0 && defaultAmount !== null) {
-        setEditAmount(defaultAmount.toString());
+        setEditAmount(formatInputAmount(defaultAmount.toString()));
       } else {
-        setEditAmount(tx.osszeg.toString());
+        setEditAmount(formatInputAmount(tx.osszeg.toString()));
       }
     }
   }, [isEditing, tx, isShared, defaultAmount]);
@@ -173,7 +175,7 @@ export const TransactionRow: React.FC<TransactionRowProps> = ({
               <input 
                 type="text"
                 value={editAmount}
-                onChange={(e) => setEditAmount(e.target.value)}
+                onChange={(e) => handleAmountInputChange(e.target.value, e.target.selectionStart || 0, setEditAmount, e.target)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
@@ -238,7 +240,7 @@ export const TransactionRow: React.FC<TransactionRowProps> = ({
               <input 
                 type="text"
                 value={editAmount}
-                onChange={(e) => setEditAmount(e.target.value)}
+                onChange={(e) => handleAmountInputChange(e.target.value, e.target.selectionStart || 0, setEditAmount, e.target)}
                 className="w-full bg-white border border-gray-300 rounded px-2 py-1 text-xs text-right font-mono font-medium"
               />
             </td>

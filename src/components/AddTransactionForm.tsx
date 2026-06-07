@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, X } from 'lucide-react';
 import { Transaction } from '../types';
-import { parseNumber } from '../utils/format';
+import { parseNumber, handleAmountInputChange } from '../utils/format';
 
 interface AddTransactionFormProps {
   transactions: Transaction[];
@@ -130,8 +130,8 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({
           <input 
             type="text"
             value={newAmount}
-            onChange={(e) => setNewAmount(e.target.value)}
-            placeholder="pl. 4200 vagy -12000"
+            onChange={(e) => handleAmountInputChange(e.target.value, e.target.selectionStart || 0, setNewAmount, e.target)}
+            placeholder="pl. 4 200 vagy -12 000"
             className="w-full bg-white border border-gray-300 rounded px-2.5 py-1.5 text-sm font-mono"
             required
           />

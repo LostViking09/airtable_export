@@ -158,3 +158,64 @@ export function getTypeSummaries(transactions: Transaction[]): TypeSummary[] {
     .map(([label, amount]) => ({ label, amount }))
     .sort((a, b) => a.label.localeCompare(b.label, 'hu'));
 }
+
+export function formatInputAmount(val: string): string {
+  if (!val) return '';
+  
+  // Keep only digits, minus sign at start, and comma/dot as decimal separator if present
+  const isNegative = val.trim().startsWith('-');
+  
+  // Remove all characters except digits, commas and dots
+  let digitsAndSeparators = val.replace(/[^\d,.]/g, '');
+  
+  // Find first decimal separator
+  const decimalMatch = digitsAndSeparators.match(/[,.]/);
+  let integerPart = digitsAndSeparators;
+  let decimalPart = '';
+  
+  if (decimalMatch && decimalMatch.index !== undefined) {
+    const separatorIdx = decimalMatch.index;
+    integerPart = digitsAndSeparators.slice(0, separatorIdx);
+    decimalPart = decimalMatch[0] + digitsAndSeparators.slice(separatorIdx + 1).replace(/[,.]/g, '');
+  }
+  
+  // Clean integer part to digits only
+  integerPart = integerPart.replace(/\D/g, '');
+  
+  if (!integerPart) {
+    return isNegative ? '-' : '';
+  }
+  
+  // Group the integer part by thousands with spaces
+  const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  
+  return (isNegative ? '-' : '') + formattedInteger + decimalPart;
+}
+
+export function handleAmountInputChange(
+  value: string,
+  selectionStart: number,
+  setter: (val: string) => void,
+  inputEl: HTMLInputElement | null
+): void {
+  const formattedValue = formatInputAmount(value);
+  setter(formattedValue);
+  
+  if (inputEl) {
+    requestAnimationFrame(() => {
+      const rawCharsBeforeCursor = value.slice(0, selectionStart).replace(/\s/g, '');
+      let newCursorPos = 0;
+      let rawCharCount = 0;
+      for (let i = 0; i < formattedValue.length; i++) {
+        if (rawCharCount === rawCharsBeforeCursor.length) {
+          break;
+        }
+        if (formattedValue[i] !== ' ') {
+          rawCharCount++;
+        }
+        newCursorPos = i + 1;
+      }
+      inputEl.setSelectionRange(newCursorPos, newCursorPos);
+    });
+  }
+}

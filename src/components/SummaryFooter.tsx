@@ -1,5 +1,5 @@
 import React from 'react';
-import { formatOsszeg, TypeSummary } from '../utils/format';
+import { formatOsszeg, TypeSummary, parseNumber, formatInputAmount, handleAmountInputChange } from '../utils/format';
 
 interface SummaryFooterProps {
   showSummary: boolean;
@@ -30,6 +30,11 @@ export const SummaryFooter: React.FC<SummaryFooterProps> = ({
   correction,
   onCorrectionChange,
 }) => {
+  const [localCorrection, setLocalCorrection] = React.useState('');
+
+  React.useEffect(() => {
+    setLocalCorrection(correction === 0 ? '' : formatInputAmount(correction.toString()));
+  }, [correction]);
   return (
     <footer className={`summary-section ${showSummary ? 'border-t border-gray-200' : ''} bg-[#f9fafb] px-6 md:px-8 py-5 flex flex-col sm:flex-row items-center justify-between gap-4`} id="app-footer">
       
@@ -103,7 +108,7 @@ export const SummaryFooter: React.FC<SummaryFooterProps> = ({
             className="text-xs font-semibold text-gray-600 cursor-pointer" 
             onClick={onToggleSeparateMunkadij}
           >
-            Munkadíj külön csoportosítása
+            Külsős munkadíj külön
           </span>
         </div>
 
@@ -154,11 +159,18 @@ export const SummaryFooter: React.FC<SummaryFooterProps> = ({
             <span className="text-gray-400 uppercase tracking-wider font-bold text-[10px]">Korrekció:</span>
             <div className="relative w-28 no-print">
               <input
-                type="number"
-                value={correction === 0 ? '' : correction}
+                type="text"
+                value={localCorrection}
                 onChange={(e) => {
-                  const val = e.target.value === '' ? 0 : Number(e.target.value);
-                  onCorrectionChange(val);
+                  handleAmountInputChange(
+                    e.target.value,
+                    e.target.selectionStart || 0,
+                    (val) => {
+                      setLocalCorrection(val);
+                      onCorrectionChange(parseNumber(val));
+                    },
+                    e.target
+                  );
                 }}
                 placeholder="0"
                 className="w-full bg-white border border-gray-300 rounded-lg px-2.5 py-1 text-xs font-semibold font-mono text-right pr-6 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 shadow-2xs"
