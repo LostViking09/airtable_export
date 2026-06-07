@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Upload, Loader2 } from 'lucide-react';
 import { useTransactions } from './hooks/useTransactions';
 import { buildClipboardContent } from './utils/clipboard';
@@ -13,6 +13,8 @@ export default function App() {
   const {
     transactions,
     fileName,
+    customTitle,
+    setCustomTitle,
     showSummary,
     setShowSummary,
     setUserToggledSummary,
@@ -42,6 +44,11 @@ export default function App() {
     originalAmounts,
     isLoadingShared,
   } = useTransactions();
+
+  // Sync document title with customTitle
+  useEffect(() => {
+    document.title = customTitle.trim() ? customTitle : 'Airtable Export';
+  }, [customTitle]);
 
   const [copySuccess, setCopySuccess] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -168,6 +175,8 @@ export default function App() {
           onPrint={handlePrint}
           isShared={isShared}
           onShare={() => setIsShareModalOpen(true)}
+          customTitle={customTitle}
+          onTitleChange={setCustomTitle}
         />
 
         {/* Action Toolbar section */}
@@ -190,6 +199,13 @@ export default function App() {
             }}
             onClose={() => setShowAddForm(false)}
           />
+        )}
+
+        {/* Print-only custom title */}
+        {customTitle.trim() && (
+          <div className="hidden print:block text-2xl font-bold text-gray-900 mb-4 px-6 md:px-8 print:px-0">
+            {customTitle}
+          </div>
         )}
 
         {/* Main Data Container */}
@@ -298,6 +314,7 @@ export default function App() {
           showFtSuffix,
         }}
         correction={correction}
+        customTitle={customTitle}
       />
     </div>
   );

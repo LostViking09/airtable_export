@@ -8,6 +8,8 @@ interface HeaderProps {
   onPrint: () => void;
   isShared?: boolean;
   onShare?: () => void;
+  customTitle: string;
+  onTitleChange: (title: string) => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -17,22 +19,36 @@ export const Header: React.FC<HeaderProps> = ({
   onPrint,
   isShared = false,
   onShare,
+  customTitle,
+  onTitleChange,
 }) => {
   return (
     <header className="header no-print border-b border-gray-200 bg-white px-6 md:px-8 py-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4" id="app-header">
-      <div className="header-title">
-        <h1 className="text-xl font-semibold text-gray-900 tracking-tight flex items-center gap-2">
-          <FileSpreadsheet className="w-6 h-6 text-blue-600" />
-          Airtable Export
-          {isShared && (
-            <span className="bg-indigo-50 text-indigo-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-indigo-200 uppercase tracking-wider select-none">
-              Megosztott nézet
-            </span>
-          )}
-        </h1>
-        <p className="text-xs text-gray-500 mt-1">
-          Adatforrás: <span className="font-medium text-gray-700 bg-gray-100 px-1.5 py-0.5 rounded italic">{fileName}</span>
-        </p>
+      <div className="header-title flex-1">
+        {isShared ? (
+          customTitle.trim() ? (
+            <h1 className="text-xl font-semibold text-gray-900 tracking-tight py-1">
+              {customTitle}
+            </h1>
+          ) : null
+        ) : (
+          <>
+            <h1 className="text-xl font-semibold text-gray-900 tracking-tight flex items-center gap-2">
+              <FileSpreadsheet className="w-6 h-6 text-blue-600 shrink-0" />
+              <input
+                type="text"
+                value={customTitle}
+                onChange={(e) => onTitleChange(e.target.value)}
+                placeholder="Airtable Export"
+                className="bg-transparent text-xl font-semibold text-gray-900 tracking-tight border border-transparent hover:border-gray-250 hover:bg-gray-50 focus:border-blue-500 focus:bg-white focus:ring-1 focus:ring-blue-500 focus:outline-none py-1 px-2 -ml-2 rounded-lg transition-all w-full max-w-[300px] sm:max-w-[400px]"
+                title="Kattintson a cím szerkesztéséhez"
+              />
+            </h1>
+            <p className="text-xs text-gray-500 mt-1">
+              Adatforrás: <span className="font-medium text-gray-700 bg-gray-100 px-1.5 py-0.5 rounded italic">{fileName}</span>
+            </p>
+          </>
+        )}
       </div>
       
       <div className="actions flex flex-wrap gap-2.5 w-full sm:w-auto">

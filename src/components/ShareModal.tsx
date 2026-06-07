@@ -15,6 +15,7 @@ interface ShareModalProps {
     showFtSuffix: boolean;
   };
   correction: number;
+  customTitle: string;
 }
 
 export const ShareModal: React.FC<ShareModalProps> = ({
@@ -23,6 +24,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
   transactions,
   settings,
   correction,
+  customTitle,
 }) => {
   const [editMode, setEditMode] = useState<'none' | 'all' | 'empty'>(() => {
     return (localStorage.getItem('share_editMode') as 'none' | 'all' | 'empty') || 'empty';
@@ -65,7 +67,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
       editMode,
       defaultSajátAmount: useDefaultAmount ? parseNumber(defaultSajátAmount) : null,
       defaultKülsősAmount: useDefaultAmount ? parseNumber(defaultKülsősAmount) : null,
-    }, correction)
+    }, correction, customTitle)
       .then((compressed) => {
         const baseUrl = window.location.origin + window.location.pathname;
         setShareUrl(`${baseUrl}#share=${compressed}`);
@@ -75,7 +77,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
         console.error('Hiba a megosztási URL generálása során:', err);
         setIsGenerating(false);
       });
-  }, [isOpen, transactions, settings, editMode, useDefaultAmount, defaultSajátAmount, defaultKülsősAmount, correction]);
+  }, [isOpen, transactions, settings, editMode, useDefaultAmount, defaultSajátAmount, defaultKülsősAmount, correction, customTitle]);
 
   const handleCopy = async () => {
     try {

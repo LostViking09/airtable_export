@@ -5,6 +5,7 @@ interface CompressedState {
   s: [boolean, boolean, boolean, boolean]; // showSummary, showTipus, separateMunkadij, showFtSuffix
   o: [string, number | null, (number | null)?]; // editMode ('none' | 'all' | 'empty'), defaultSajátAmount, defaultKülsősAmount
   c?: number; // correction (optional)
+  ti?: string; // custom title (optional)
 }
 
 function bufferToBase64Url(buffer: ArrayBuffer): string {
@@ -48,13 +49,15 @@ export async function compressShareState(
     defaultSajátAmount: number | null;
     defaultKülsősAmount: number | null;
   },
-  correction: number
+  correction: number,
+  customTitle?: string
 ): Promise<string> {
   const compressed: CompressedState = {
     t: transactions.map(t => [t.datum, t.kategoria, t.megnevezes, t.tipus || '', t.osszeg, t.id]),
     s: [settings.showSummary, settings.showTipus, settings.separateMunkadij, settings.showFtSuffix],
     o: [options.editMode, options.defaultSajátAmount, options.defaultKülsősAmount],
-    c: correction
+    c: correction,
+    ti: customTitle || undefined
   };
 
   const jsonString = JSON.stringify(compressed);
@@ -89,6 +92,7 @@ export async function decompressShareState(hash: string): Promise<{
     defaultKülsősAmount: number | null;
   };
   correction: number;
+  customTitle?: string;
 } | null> {
   if (!hash) return null;
   
@@ -137,7 +141,8 @@ export async function decompressShareState(hash: string): Promise<{
         defaultSajátAmount: parsed.o[1],
         defaultKülsősAmount: parsed.o.length > 2 ? (parsed.o[2] ?? null) : parsed.o[1]
       },
-      correction: parsed.c ?? 0
+      correction: parsed.c ?? 0,
+      customTitle: parsed.ti || ''
     };
   } catch (e) {
     console.error('Failed to decompress share state:', e);

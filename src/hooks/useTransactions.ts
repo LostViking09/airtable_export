@@ -37,6 +37,10 @@ export function useTransactions() {
     return stored !== null ? stored === 'true' : true;
   });
   const [correction, setCorrection] = useState<number>(0);
+  const [customTitle, setCustomTitle] = useState(() => {
+    if (isSharedUrl) return '';
+    return localStorage.getItem('view_customTitle') || '';
+  });
 
   // Shared view states
   const [isShared, setIsShared] = useState(false);
@@ -80,6 +84,12 @@ export function useTransactions() {
     }
   }, [separateMunkadij, isShared]);
 
+  useEffect(() => {
+    if (!isShared && !window.location.hash.startsWith('#share=')) {
+      localStorage.setItem('view_customTitle', customTitle);
+    }
+  }, [customTitle, isShared]);
+
   // Load shared state from hash on mount
   useEffect(() => {
     const hash = window.location.hash;
@@ -96,6 +106,7 @@ export function useTransactions() {
             setSeparateMunkadij(decoded.settings.separateMunkadij);
             setShowFtSuffix(decoded.settings.showFtSuffix);
             setCorrection(decoded.correction);
+            setCustomTitle(decoded.customTitle || '');
             
             // Prevent auto-summary override
             setUserToggledSummary(true);
@@ -189,6 +200,7 @@ export function useTransactions() {
   const clearAllTransactions = () => {
     setTransactions([]);
     setFileName('Üres táblázat');
+    setCustomTitle('');
   };
 
   const processFile = (file: File): Promise<boolean> => {
@@ -201,6 +213,7 @@ export function useTransactions() {
           if (parsed.length > 0) {
             setTransactions(parsed);
             setFileName(file.name);
+            setCustomTitle('');
             resolve(true);
           } else {
             resolve(false);
@@ -216,6 +229,8 @@ export function useTransactions() {
   return {
     transactions,
     fileName,
+    customTitle,
+    setCustomTitle,
     showSummary,
     setShowSummary,
     userToggledSummary,
