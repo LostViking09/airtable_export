@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Transaction } from '../types';
 import { parseCSV } from '../utils/csv';
-import { parseNumber, getTypeSummaries } from '../utils/format';
+import { parseNumber, getTypeSummaries, isSeparatedTransaction } from '../utils/format';
 import { decompressShareState } from '../utils/share';
 
 export function useTransactions() {
@@ -148,12 +148,12 @@ export function useTransactions() {
 
   const mainTransactions = useMemo(() => {
     if (!separateMunkadij) return filteredTransactions;
-    return filteredTransactions.filter(t => t.tipus?.trim().toLowerCase() !== 'továbbhárított munkadíj');
+    return filteredTransactions.filter(t => !isSeparatedTransaction(t));
   }, [filteredTransactions, separateMunkadij]);
 
   const munkadijTransactions = useMemo(() => {
     if (!separateMunkadij) return [];
-    return filteredTransactions.filter(t => t.tipus?.trim().toLowerCase() === 'továbbhárított munkadíj');
+    return filteredTransactions.filter(t => isSeparatedTransaction(t));
   }, [filteredTransactions, separateMunkadij]);
 
   const totalAmount = useMemo(() => {

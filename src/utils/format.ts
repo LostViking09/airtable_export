@@ -1,5 +1,11 @@
 import { Transaction } from '../types';
 
+export function isSeparatedTransaction(t: Transaction): boolean {
+  const isMunkadij = (t.tipus || '').trim().toLowerCase() === 'továbbhárított munkadíj';
+  const hasBrackets = /\[[^\]]+\]/.test(t.megnevezes || '');
+  return isMunkadij || hasBrackets;
+}
+
 export function parseNumber(val: string): number {
   if (!val) return 0;
   // Strip all alphabetical characters (includes HUF, Ft, HUF, EUR, etc.) case-insensitive & Hungarian accents

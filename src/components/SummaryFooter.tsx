@@ -130,7 +130,7 @@ export const SummaryFooter: React.FC<SummaryFooterProps> = ({
                 className="text-xs font-semibold text-gray-600 cursor-pointer hover:text-gray-900 transition-colors select-none" 
                 onClick={onToggleSeparateMunkadij}
               >
-                Külsős munkadíj külön
+                Munkadíj / [Zárójeles] külön
               </span>
               <button
                 type="button"
