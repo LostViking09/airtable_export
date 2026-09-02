@@ -99,7 +99,7 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
     <div className="overflow-x-auto">
       <table className="data-table w-full border-collapse">
         <thead>
-          <tr className="border-b-2 border-gray-100">
+          <tr className="border-b-2 border-gray-100 print:break-inside-avoid">
             <th className="text-left font-semibold text-[11px] uppercase tracking-wider text-gray-500 px-6 py-4">Dátum</th>
             <th className="text-left font-semibold text-[11px] uppercase tracking-wider text-gray-500 px-6 py-4">Rendezvény</th>
             <th className="text-left font-semibold text-[11px] uppercase tracking-wider text-gray-500 px-6 py-4">Megnevezés</th>
@@ -112,7 +112,7 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
           {separateMunkadij && munkadijTransactions.length > 0 ? (
             <>
               {renderRows(mainTransactions)}
-              <tr className="munkadij-separator bg-gray-50/50 print:bg-white no-print-height">
+              <tr className="munkadij-separator bg-gray-50/50 print:bg-white no-print-height print:break-inside-avoid">
                 <td 
                   colSpan={showTipus ? (showActionsColumn ? 6 : 5) : (showActionsColumn ? 5 : 4)} 
                 ></td>

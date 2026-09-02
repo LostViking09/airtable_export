@@ -52,7 +52,7 @@ export const SummaryFooter: React.FC<SummaryFooterProps> = ({
   }, []);
 
   return (
-    <footer className={`summary-section ${showSummary ? 'border-t border-gray-200' : ''} bg-[#f9fafb] px-6 md:px-8 py-5 flex flex-col sm:flex-row items-center justify-between gap-4`} id="app-footer">
+    <footer className={`summary-section ${showSummary ? 'border-t border-gray-200' : ''} bg-[#f9fafb] px-6 md:px-8 py-5 flex flex-col sm:flex-row items-center justify-between gap-4 print:break-inside-avoid`} id="app-footer">
       
       {/* Settings dropdown trigger */}
       <div className="no-print relative" ref={dropdownRef}>

@@ -157,7 +157,7 @@ export const TransactionRow: React.FC<TransactionRowProps> = ({
   }
 
   return (
-    <tr className={`${(idx + listOffset) % 2 === 1 ? 'bg-[#fcfcfd]' : 'bg-white'} ${hasDateChange ? 'date-separator' : ''}`}>
+    <tr className={`${(idx + listOffset) % 2 === 1 ? 'bg-[#fcfcfd]' : 'bg-white'} ${hasDateChange ? 'date-separator' : ''} print:break-inside-avoid`}>
       {isEditing ? (
         isShared ? (
           <>
