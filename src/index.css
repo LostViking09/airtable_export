@@ -29,6 +29,23 @@
     border: none !important;
     box-shadow: none !important;
   }
+  
+  /* Fix page breaks */
+  table {
+    page-break-inside: auto !important;
+  }
+  tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    page-break-after: auto !important;
+  }
+  thead {
+    display: table-header-group !important;
+  }
+  tfoot {
+    display: table-footer-group !important;
+  }
+
   .data-table {
     margin-top: 10px !important;
     border-collapse: collapse !important;
@@ -79,5 +96,3 @@
 .amount-cell, .amount-header {
   white-space: nowrap !important;
 }
-
-

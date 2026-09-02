@@ -96,7 +96,7 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
   }
 
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto print:overflow-visible">
       <table className="data-table w-full border-collapse">
         <thead>
           <tr className="border-b-2 border-gray-100 print:break-inside-avoid">

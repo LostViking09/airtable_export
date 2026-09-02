@@ -139,7 +139,7 @@ export default function App() {
 
   return (
     <div 
-      className="min-h-screen bg-[#f9fafb] p-0 md:py-8 flex flex-col justify-start"
+      className="min-h-screen bg-[#f9fafb] p-0 md:py-8 flex flex-col justify-start print:block"
       id="main-container"
       onDragOver={isShared ? undefined : handleDragOver}
       onDragLeave={isShared ? undefined : handleDragLeave}
@@ -165,7 +165,7 @@ export default function App() {
       )}
 
       {/* Main app box matching "Sleek Interface viewport" */}
-      <div className="viewport print-full flex flex-col flex-1 w-full max-w-5xl mx-auto bg-white border-x border-gray-200 md:rounded-xl md:shadow-md overflow-hidden relative" id="app-viewport">
+      <div className="viewport print-full flex flex-col flex-1 w-full max-w-5xl mx-auto bg-white border-x border-gray-200 md:rounded-xl md:shadow-md overflow-hidden print:overflow-visible relative print:block" id="app-viewport">
         
         {/* Header Block */}
         <Header 
