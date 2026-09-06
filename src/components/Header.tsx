@@ -1,3 +1,4 @@
+// src/components/Header.tsx
 import React from 'react';
 import { FileSpreadsheet, Check, Copy, Printer, Share2 } from 'lucide-react';
 
@@ -95,4 +96,3 @@ export const Header: React.FC<HeaderProps> = ({
     </header>
   );
 };
-

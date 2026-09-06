@@ -1,5 +1,6 @@
+// src/App.tsx
 import React, { useState, useEffect } from 'react';
-import { Upload, Loader2 } from 'lucide-react';
+import { Upload, Loader2, Lock, KeyRound, ShieldCheck, Key } from 'lucide-react';
 import { useTransactions } from './hooks/useTransactions';
 import { buildClipboardContent } from './utils/clipboard';
 import { Header } from './components/Header';
@@ -8,6 +9,7 @@ import { AddTransactionForm } from './components/AddTransactionForm';
 import { TransactionTable } from './components/TransactionTable';
 import { SummaryFooter } from './components/SummaryFooter';
 import { ShareModal } from './components/ShareModal';
+import { KeyGeneratorModal } from './components/KeyGeneratorModal';
 
 export default function App() {
   const {
@@ -43,6 +45,8 @@ export default function App() {
     originalEmptyIds,
     originalAmounts,
     isLoadingShared,
+    isPasswordRequired,
+    unlockSharedData,
   } = useTransactions();
 
   // Sync document title with customTitle
@@ -55,6 +59,30 @@ export default function App() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingRowId, setEditingRowId] = useState<string | null>(null);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  
+  // Specific #keygen URL hash detection
+  const [isKeyGenMode, setIsKeyGenMode] = useState(() => {
+    return typeof window !== 'undefined' && (window.location.hash === '#keygen' || window.location.hash === '#kulcs');
+  });
+  const [isKeyGenModalOpen, setIsKeyGenModalOpen] = useState(() => {
+    return typeof window !== 'undefined' && (window.location.hash === '#keygen' || window.location.hash === '#kulcs');
+  });
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      const isKey = window.location.hash === '#keygen' || window.location.hash === '#kulcs';
+      setIsKeyGenMode(isKey);
+      if (isKey) {
+        setIsKeyGenModalOpen(true);
+      }
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  const [passwordInput, setPasswordInput] = useState('');
+  const [passwordError, setPasswordError] = useState(false);
+  const [isUnlocking, setIsUnlocking] = useState(false);
 
   // Drag & drop handlers
   const handleDragOver = (e: React.DragEvent) => {
@@ -100,6 +128,17 @@ export default function App() {
     window.print();
   };
 
+  const handleUnlock = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsUnlocking(true);
+    setPasswordError(false);
+    const success = await unlockSharedData(passwordInput);
+    setIsUnlocking(false);
+    if (!success) {
+      setPasswordError(true);
+    }
+  };
+
   const copyToClipboard = async () => {
     try {
       const { tsvContent, htmlContent } = buildClipboardContent({
@@ -136,6 +175,98 @@ export default function App() {
       alert('Sikertelen másolás. Kérjük válassza ki a táblázatot manuálisan.');
     }
   };
+
+  // If URL is explicitly #keygen, handle standalone mode
+  if (isKeyGenMode) {
+    return (
+      <div className="min-h-screen bg-[#f9fafb] flex items-center justify-center p-4">
+        {isKeyGenModalOpen ? (
+          <KeyGeneratorModal 
+            isOpen={true}
+            onClose={() => {
+              setIsKeyGenModalOpen(false);
+            }}
+          />
+        ) : (
+          <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-100 flex flex-col items-center text-center animate-in fade-in duration-200">
+            <div className="bg-emerald-50 text-emerald-600 p-4 rounded-full mb-5">
+              <ShieldCheck className="w-8 h-8" />
+            </div>
+            <h2 className="text-xl font-bold text-gray-900 mb-2">A kulcsgenerálás kész</h2>
+            <p className="text-sm text-gray-500 mb-8 leading-relaxed">
+              A kapott publikus kulcsot küldje el a megosztó félnek. Amint megkapja a titkosított linket, a beállított jelszavával tudja majd megnyitni.
+            </p>
+            <div className="flex flex-col gap-2.5 w-full">
+              <button
+                type="button"
+                onClick={() => setIsKeyGenModalOpen(true)}
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-sm font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors cursor-pointer"
+              >
+                <Key className="w-4 h-4" />
+                Kulcs újragenerálása
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (isPasswordRequired) {
+    const isAsymmetric = typeof window !== 'undefined' && window.location.hash.startsWith('#share=e2_');
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-100 flex flex-col items-center">
+          <div className="bg-blue-50 text-blue-600 p-4 rounded-full mb-6">
+            <Lock className="w-8 h-8" />
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Jelszóval Védett Adatok</h2>
+          <p className="text-sm text-gray-500 text-center mb-8">
+            {isAsymmetric
+              ? 'Ezt a táblázatot az Ön egyedi fogadó kulcsával titkosították. A megtekintéshez adja meg a kulcsához tartozó jelszavát.'
+              : 'Ennek a megosztott linknek a tartalma AES-GCM titkosítással van védve. A tartalom megtekintéséhez adja meg a jelszót.'}
+          </p>
+          <form onSubmit={handleUnlock} className="w-full">
+            <div className="relative mb-6">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <KeyRound className="h-5 w-5 text-gray-400" />
+              </div>
+              <input
+                type="password"
+                value={passwordInput}
+                onChange={(e) => {
+                  setPasswordInput(e.target.value);
+                  setPasswordError(false);
+                }}
+                className={`w-full pl-10 pr-3 py-2 border rounded-xl shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${
+                  passwordError ? 'border-red-300' : 'border-gray-300'
+                }`}
+                placeholder="Titkosítási jelszó"
+                autoFocus
+              />
+              {passwordError && (
+                <p className="mt-2 text-sm text-red-600 font-medium">Helytelen jelszó vagy sérült adatok.</p>
+              )}
+            </div>
+            <button
+              type="submit"
+              disabled={isUnlocking || !passwordInput}
+              className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+            >
+              {isUnlocking ? (
+                <>
+                  <Loader2 className="animate-spin -ml-1 mr-2 h-5 w-5" />
+                  Visszafejtés...
+                </>
+              ) : (
+                'Visszafejtés'
+              )}
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div 

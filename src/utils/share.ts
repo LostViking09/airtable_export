@@ -1,4 +1,7 @@
+// src/utils/share.ts
 import { Transaction } from '../types';
+import { encryptData, decryptData, encryptAsymmetric, decryptAsymmetric } from './crypto';
+import { parsePublicKey } from './x25519';
 
 interface CompressedState {
   t: [string, string, string, string, number, string][]; // datum, kategoria, megnevezes, tipus, osszeg, id
@@ -36,6 +39,20 @@ function base64UrlToBuffer(base64url: string): ArrayBuffer {
   return bytes.buffer;
 }
 
+export type EncryptionConfig = 
+  | string // Legacy string password
+  | {
+      type: 'none';
+    }
+  | {
+      type: 'password';
+      password: string;
+    }
+  | {
+      type: 'pubkey';
+      recipientPublicKey: string;
+    };
+
 export async function compressShareState(
   transactions: Transaction[],
   settings: {
@@ -50,7 +67,8 @@ export async function compressShareState(
     defaultKülsősAmount: number | null;
   },
   correction: number,
-  customTitle?: string
+  customTitle?: string,
+  encryption?: EncryptionConfig
 ): Promise<string> {
   const compressed: CompressedState = {
     t: transactions.map(t => [t.datum, t.kategoria, t.megnevezes, t.tipus || '', t.osszeg, t.id]),
@@ -61,6 +79,36 @@ export async function compressShareState(
   };
 
   const jsonString = JSON.stringify(compressed);
+
+  // Check encryption mode
+  if (typeof encryption === 'string' && encryption.trim() !== '') {
+    const { encryptedBuffer, salt, iv } = await encryptData(jsonString, encryption.trim());
+    const combined = new Uint8Array(salt.length + iv.length + encryptedBuffer.byteLength);
+    combined.set(salt, 0);
+    combined.set(iv, salt.length);
+    combined.set(new Uint8Array(encryptedBuffer), salt.length + iv.length);
+    return 'e1_' + bufferToBase64Url(combined.buffer);
+  } else if (encryption && typeof encryption === 'object') {
+    if (encryption.type === 'password' && encryption.password.trim() !== '') {
+      const { encryptedBuffer, salt, iv } = await encryptData(jsonString, encryption.password.trim());
+      const combined = new Uint8Array(salt.length + iv.length + encryptedBuffer.byteLength);
+      combined.set(salt, 0);
+      combined.set(iv, salt.length);
+      combined.set(new Uint8Array(encryptedBuffer), salt.length + iv.length);
+      return 'e1_' + bufferToBase64Url(combined.buffer);
+    } else if (encryption.type === 'pubkey' && encryption.recipientPublicKey.trim() !== '') {
+      const pubKeyBytes = parsePublicKey(encryption.recipientPublicKey);
+      if (!pubKeyBytes) {
+        throw new Error('Érvénytelen címzett publikus kulcs formátum.');
+      }
+      const { encryptedBuffer, ephemeralPubKey, iv } = await encryptAsymmetric(jsonString, pubKeyBytes);
+      const combined = new Uint8Array(ephemeralPubKey.length + iv.length + encryptedBuffer.byteLength);
+      combined.set(ephemeralPubKey, 0);
+      combined.set(iv, ephemeralPubKey.length);
+      combined.set(new Uint8Array(encryptedBuffer), ephemeralPubKey.length + iv.length);
+      return 'e2_' + bufferToBase64Url(combined.buffer);
+    }
+  }
   
   try {
     if (typeof CompressionStream !== 'undefined') {
@@ -78,7 +126,7 @@ export async function compressShareState(
   return 'p1_' + bufferToBase64Url(utf8Bytes.buffer);
 }
 
-export async function decompressShareState(hash: string): Promise<{
+export async function decompressShareState(hash: string, password?: string): Promise<{
   transactions: Transaction[];
   settings: {
     showSummary: boolean;
@@ -104,7 +152,23 @@ export async function decompressShareState(hash: string): Promise<{
   try {
     const buffer = base64UrlToBuffer(dataPart);
     
-    if (prefix === 'z1_') {
+    if (prefix === 'e1_') {
+      if (!password) {
+        throw new Error('Password required for encrypted share state');
+      }
+      const salt = new Uint8Array(buffer.slice(0, 16));
+      const iv = new Uint8Array(buffer.slice(16, 28));
+      const encryptedData = buffer.slice(28);
+      jsonString = await decryptData(encryptedData, password, salt, iv);
+    } else if (prefix === 'e2_') {
+      if (!password) {
+        throw new Error('Password required for asymmetric encrypted share state');
+      }
+      const ephemeralPubKey = new Uint8Array(buffer.slice(0, 32));
+      const iv = new Uint8Array(buffer.slice(32, 44));
+      const encryptedData = buffer.slice(44);
+      jsonString = await decryptAsymmetric(encryptedData, ephemeralPubKey, iv, password);
+    } else if (prefix === 'z1_') {
       if (typeof DecompressionStream !== 'undefined') {
         const decompressedStream = new Blob([buffer]).stream().pipeThrough(new DecompressionStream('gzip'));
         jsonString = await new Response(decompressedStream).text();
@@ -146,6 +210,6 @@ export async function decompressShareState(hash: string): Promise<{
     };
   } catch (e) {
     console.error('Failed to decompress share state:', e);
-    return null;
+    throw e;
   }
 }

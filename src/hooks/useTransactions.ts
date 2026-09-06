@@ -53,6 +53,9 @@ export function useTransactions() {
   const [originalAmounts, setOriginalAmounts] = useState<Record<string, number>>({});
   const [isLoadingShared, setIsLoadingShared] = useState(false);
 
+  const [isPasswordRequired, setIsPasswordRequired] = useState(false);
+  const [encryptedShareHash, setEncryptedShareHash] = useState<string | null>(null);
+
   // Save Settings/UI states to localStorage if NOT a shared URL
   useEffect(() => {
     if (!isShared && !window.location.hash.startsWith('#share=')) {
@@ -90,47 +93,70 @@ export function useTransactions() {
     }
   }, [customTitle, isShared]);
 
+  const loadSharedData = (hash: string, password?: string): Promise<boolean> => {
+    setIsLoadingShared(true);
+    return decompressShareState(hash, password).then(decoded => {
+      if (decoded) {
+        setTransactions(decoded.transactions);
+        setFileName('Megosztott táblázat');
+        setShowSummary(decoded.settings.showSummary);
+        setShowTipus(decoded.settings.showTipus);
+        setSeparateMunkadij(decoded.settings.separateMunkadij);
+        setShowFtSuffix(decoded.settings.showFtSuffix);
+        setCorrection(decoded.correction);
+        setCustomTitle(decoded.customTitle || '');
+        
+        // Prevent auto-summary override
+        setUserToggledSummary(true);
+        
+        setIsShared(true);
+        setShareOptions(decoded.options);
+        
+        // Track empty IDs and meglévő amounts at load time
+        const emptyIds = new Set<string>();
+        const amounts: Record<string, number> = {};
+        decoded.transactions.forEach(t => {
+          amounts[t.id] = t.osszeg;
+          if (t.osszeg === 0) {
+            emptyIds.add(t.id);
+          }
+        });
+        setOriginalEmptyIds(emptyIds);
+        setOriginalAmounts(amounts);
+        setIsLoadingShared(false);
+        setIsPasswordRequired(false);
+        return true;
+      }
+      setIsLoadingShared(false);
+      return false;
+    }).catch(err => {
+      console.error('Failed to load shared state:', err);
+      setIsLoadingShared(false);
+      throw err;
+    });
+  };
+
+  const unlockSharedData = async (password: string) => {
+    if (!encryptedShareHash) return false;
+    try {
+      return await loadSharedData(encryptedShareHash, password);
+    } catch (e) {
+      return false; // Decryption failed (wrong password)
+    }
+  };
+
   // Load shared state from hash on mount
   useEffect(() => {
     const hash = window.location.hash;
     if (hash.startsWith('#share=')) {
       const shareData = hash.slice(7);
       if (shareData) {
-        setIsLoadingShared(true);
-        decompressShareState(shareData).then(decoded => {
-          if (decoded) {
-            setTransactions(decoded.transactions);
-            setFileName('Megosztott táblázat');
-            setShowSummary(decoded.settings.showSummary);
-            setShowTipus(decoded.settings.showTipus);
-            setSeparateMunkadij(decoded.settings.separateMunkadij);
-            setShowFtSuffix(decoded.settings.showFtSuffix);
-            setCorrection(decoded.correction);
-            setCustomTitle(decoded.customTitle || '');
-            
-            // Prevent auto-summary override
-            setUserToggledSummary(true);
-            
-            setIsShared(true);
-            setShareOptions(decoded.options);
-            
-            // Track empty IDs and meglévő amounts at load time
-            const emptyIds = new Set<string>();
-            const amounts: Record<string, number> = {};
-            decoded.transactions.forEach(t => {
-              amounts[t.id] = t.osszeg;
-              if (t.osszeg === 0) {
-                emptyIds.add(t.id);
-              }
-            });
-            setOriginalEmptyIds(emptyIds);
-            setOriginalAmounts(amounts);
-          }
-          setIsLoadingShared(false);
-        }).catch(err => {
-          console.error('Failed to load shared state:', err);
-          setIsLoadingShared(false);
-        });
+        if (shareData.startsWith('e1_') || shareData.startsWith('e2_')) {
+          setIsPasswordRequired(true);
+          setEncryptedShareHash(shareData);
+        } else {
+          loadSharedData(shareData).catch(() => {});
+        }
       }
     }
   }, []);
@@ -259,6 +285,8 @@ export function useTransactions() {
     originalEmptyIds,
     originalAmounts,
     isLoadingShared,
+    isPasswordRequired,
+    unlockSharedData,
 
     // Actions
     addTransaction,

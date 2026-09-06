@@ -1,8 +1,10 @@
+// src/components/ShareModal.tsx
 import React, { useState, useEffect } from 'react';
-import { X, Copy, Check, Share2, Settings, AlertCircle } from 'lucide-react';
+import { X, Copy, Check, Share2, AlertCircle, Shield, Key, Lock, Unlock, Link } from 'lucide-react';
 import { Transaction } from '../types';
-import { compressShareState } from '../utils/share';
+import { compressShareState, EncryptionConfig } from '../utils/share';
 import { parseNumber, handleAmountInputChange } from '../utils/format';
+import { parsePublicKey } from '../utils/x25519';
 
 interface ShareModalProps {
   isOpen: boolean;
@@ -39,9 +41,16 @@ export const ShareModal: React.FC<ShareModalProps> = ({
   const [defaultKülsősAmount, setDefaultKülsősAmount] = useState<string>(() => {
     return localStorage.getItem('share_defaultKülsősAmount') || '35 000';
   });
+
+  const [cryptoType, setCryptoType] = useState<'none' | 'password' | 'pubkey'>('none');
+  const [password, setPassword] = useState('');
+  const [recipientPublicKey, setRecipientPublicKey] = useState('');
+
   const [shareUrl, setShareUrl] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [copySuccess, setCopySuccess] = useState(false);
+  const [keygenCopied, setKeygenCopied] = useState(false);
 
   useEffect(() => {
     localStorage.setItem('share_editMode', editMode);
@@ -62,12 +71,52 @@ export const ShareModal: React.FC<ShareModalProps> = ({
   useEffect(() => {
     if (!isOpen) return;
 
+    setErrorMsg(null);
+
+    let encryptionConfig: EncryptionConfig | undefined = undefined;
+
+    if (cryptoType === 'password') {
+      if (!password.trim()) {
+        setShareUrl('');
+        setErrorMsg('Kérjük, adjon meg egy jelszót a titkosításhoz!');
+        return;
+      }
+      encryptionConfig = {
+        type: 'password',
+        password: password.trim()
+      };
+    } else if (cryptoType === 'pubkey') {
+      const cleanKey = recipientPublicKey.trim();
+      if (!cleanKey) {
+        setShareUrl('');
+        setErrorMsg('Kérjük, másolja be a címzett publikus kulcsát (pub_...)!');
+        return;
+      }
+      const parsed = parsePublicKey(cleanKey);
+      if (!parsed) {
+        setShareUrl('');
+        setErrorMsg('Érvénytelen publikus kulcs formátum! A kulcsnak pub_ kezdetűnek kell lennie.');
+        return;
+      }
+      encryptionConfig = {
+        type: 'pubkey',
+        recipientPublicKey: cleanKey
+      };
+    }
+
     setIsGenerating(true);
-    compressShareState(transactions, settings, {
-      editMode,
-      defaultSajátAmount: useDefaultAmount ? parseNumber(defaultSajátAmount) : null,
-      defaultKülsősAmount: useDefaultAmount ? parseNumber(defaultKülsősAmount) : null,
-    }, correction, customTitle)
+    compressShareState(
+      transactions,
+      settings,
+      {
+        editMode,
+        defaultSajátAmount: useDefaultAmount ? parseNumber(defaultSajátAmount) : null,
+        defaultKülsősAmount: useDefaultAmount ? parseNumber(defaultKülsősAmount) : null,
+      },
+      correction,
+      customTitle,
+      encryptionConfig
+    )
       .then((compressed) => {
         const baseUrl = window.location.origin + window.location.pathname;
         setShareUrl(`${baseUrl}#share=${compressed}`);
@@ -75,11 +124,26 @@ export const ShareModal: React.FC<ShareModalProps> = ({
       })
       .catch((err) => {
         console.error('Hiba a megosztási URL generálása során:', err);
+        setErrorMsg('Hiba történt a link generálásakor.');
         setIsGenerating(false);
       });
-  }, [isOpen, transactions, settings, editMode, useDefaultAmount, defaultSajátAmount, defaultKülsősAmount, correction, customTitle]);
+  }, [
+    isOpen,
+    transactions,
+    settings,
+    editMode,
+    useDefaultAmount,
+    defaultSajátAmount,
+    defaultKülsősAmount,
+    correction,
+    customTitle,
+    cryptoType,
+    password,
+    recipientPublicKey
+  ]);
 
   const handleCopy = async () => {
+    if (!shareUrl) return;
     try {
       await navigator.clipboard.writeText(shareUrl);
       setCopySuccess(true);
@@ -90,14 +154,25 @@ export const ShareModal: React.FC<ShareModalProps> = ({
     }
   };
 
+  const handleCopyKeygenLink = async () => {
+    try {
+      const keygenUrl = `${window.location.origin}${window.location.pathname}#keygen`;
+      await navigator.clipboard.writeText(keygenUrl);
+      setKeygenCopied(true);
+      setTimeout(() => setKeygenCopied(false), 2000);
+    } catch (err) {
+      console.error('Kulcskérő link másolása sikertelen:', err);
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-gray-100 flex flex-col animate-in fade-in zoom-in duration-200">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden border border-gray-100 flex flex-col animate-in fade-in zoom-in duration-200">
         
         {/* Modal Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-5 flex items-center justify-between text-white">
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-5 flex items-center justify-between text-white shrink-0">
           <div className="flex items-center gap-2.5">
             <Share2 className="w-5 h-5" />
             <h2 className="text-lg font-bold tracking-tight">Táblázat megosztása</h2>
@@ -111,7 +186,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 flex-1 overflow-y-auto space-y-6">
+        <div className="p-6 flex-1 overflow-y-auto min-h-0 space-y-6">
           
           {/* Info notification */}
           <div className="flex gap-3 bg-blue-50 border border-blue-100 rounded-xl p-3.5 text-xs text-blue-700">
@@ -258,43 +333,170 @@ export const ShareModal: React.FC<ShareModalProps> = ({
             </div>
           )}
 
+          {/* Encryption Options */}
+          <div className="space-y-3">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
+              <Shield className="w-3.5 h-3.5 text-indigo-500" />
+              Titkosítás és biztonság
+            </h3>
+
+            {/* Encryption Mode Tabs */}
+            <div className="grid grid-cols-3 gap-1.5 bg-gray-100 p-1 rounded-xl">
+              <button
+                type="button"
+                onClick={() => setCryptoType('none')}
+                className={`py-2 px-2.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  cryptoType === 'none'
+                    ? 'bg-white text-gray-900 shadow-xs'
+                    : 'text-gray-500 hover:text-gray-900'
+                }`}
+              >
+                <Unlock className="w-3.5 h-3.5 text-gray-400" />
+                <span>Nincs</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setCryptoType('password')}
+                className={`py-2 px-2.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  cryptoType === 'password'
+                    ? 'bg-white text-blue-700 shadow-xs'
+                    : 'text-gray-500 hover:text-gray-900'
+                }`}
+              >
+                <Lock className="w-3.5 h-3.5 text-blue-500" />
+                <span>Közös jelszó</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setCryptoType('pubkey')}
+                className={`py-2 px-2.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  cryptoType === 'pubkey'
+                    ? 'bg-white text-emerald-700 shadow-xs'
+                    : 'text-gray-500 hover:text-gray-900'
+                }`}
+              >
+                <Key className="w-3.5 h-3.5 text-emerald-500" />
+                <span>Címzett kulcsa</span>
+              </button>
+            </div>
+
+            {/* Password mode details */}
+            {cryptoType === 'password' && (
+              <div className="bg-blue-50/50 border border-blue-150 rounded-xl p-4 space-y-2 animate-in fade-in duration-150">
+                <label className="block text-xs font-semibold text-gray-750">
+                  Megosztási jelszó megadása
+                </label>
+                <input 
+                  type="text"
+                  placeholder="Írjon be egy jelszót..."
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full bg-white border border-blue-200 rounded-lg px-3 py-2 text-sm font-semibold focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                />
+                <p className="text-xs text-gray-500">
+                  A linket AES-GCM titkosítással látjuk el. A jelszót külön el kell küldenie a fogadó félnek.
+                </p>
+              </div>
+            )}
+
+            {/* Recipient public key details */}
+            {cryptoType === 'pubkey' && (
+              <div className="bg-emerald-50/50 border border-emerald-150 rounded-xl p-4 space-y-3 animate-in fade-in duration-150">
+                <label className="block text-xs font-bold text-gray-750">
+                  Címzett publikus kulcsa (Public Key)
+                </label>
+                <input 
+                  type="text"
+                  placeholder="Illessze be a címzett kulcsát (pl. pub_...)"
+                  value={recipientPublicKey}
+                  onChange={(e) => setRecipientPublicKey(e.target.value)}
+                  className="w-full bg-white border border-emerald-200 rounded-lg px-3 py-2 text-xs font-mono font-semibold focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
+                />
+
+                {/* Keygen link helper for the sender to send to recipient */}
+                <div className="bg-white border border-emerald-100 rounded-lg p-3 space-y-2">
+                  <div className="text-[11px] font-semibold text-emerald-900 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <Link className="w-3.5 h-3.5 text-emerald-600" />
+                      Nincs még kulcsa a címzettnek?
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleCopyKeygenLink}
+                      className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-2 py-1 rounded border border-emerald-200 flex items-center gap-1 cursor-pointer transition-colors"
+                    >
+                      {keygenCopied ? (
+                        <>
+                          <Check className="w-3 h-3 text-emerald-600" />
+                          Link másolva!
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3 h-3" />
+                          Kulcskérő link másolása
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-gray-500">
+                    Küldje el a címzettnek a kulcskérő linket (<code className="bg-gray-100 px-1 py-0.5 rounded text-gray-700">#keygen</code>), ahol ő megadja a saját jelszavát és visszaküldi a kapott kulcsot.
+                  </p>
+                </div>
+
+                <p className="text-xs text-gray-650">
+                  <strong>Zero-Knowledge védelem:</strong> A címzett saját jelszót választ a gépén. Ön a címzett jelszavát soha nem látja, mégis csak ő tudja feloldani a linket a saját jelszavával.
+                </p>
+              </div>
+            )}
+
+          </div>
+
         </div>
 
         {/* Modal Footer (Copy link block) */}
-        <div className="bg-gray-50 border-t border-gray-100 p-6 space-y-2.5">
+        <div className="bg-gray-50 border-t border-gray-100 p-6 space-y-2.5 shrink-0">
           <h4 className="text-xs font-bold uppercase tracking-wider text-gray-450">Megosztási link</h4>
           
-          <div className="flex gap-2">
-            <input 
-              type="text" 
-              readOnly 
-              value={isGenerating ? 'Generálás...' : shareUrl}
-              onClick={(e) => (e.target as HTMLInputElement).select()}
-              className="flex-1 bg-white border border-gray-300 rounded-lg px-3 py-2 text-xs font-mono text-gray-600 select-all focus:outline-none"
-            />
-            
-            <button 
-              onClick={handleCopy}
-              disabled={isGenerating || !shareUrl}
-              className={`inline-flex items-center text-xs font-bold rounded-lg px-4 py-2 border transition-all cursor-pointer shadow-2xs shrink-0 select-none ${
-                copySuccess 
-                  ? 'bg-emerald-500 text-white border-emerald-500 hover:bg-emerald-600' 
-                  : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 disabled:opacity-50'
-              }`}
-            >
-              {copySuccess ? (
-                <>
-                  <Check className="w-3.5 h-3.5 mr-1.5 animate-in zoom-in duration-100" />
-                  Másolva!
-                </>
-              ) : (
-                <>
-                  <Copy className="w-3.5 h-3.5 mr-1.5" />
-                  Másolás
-                </>
-              )}
-            </button>
-          </div>
+          {errorMsg ? (
+            <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2.5 font-medium flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 text-amber-500" />
+              <span>{errorMsg}</span>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <input 
+                type="text" 
+                readOnly 
+                value={isGenerating ? 'Generálás...' : shareUrl}
+                onClick={(e) => (e.target as HTMLInputElement).select()}
+                className="flex-1 bg-white border border-gray-300 rounded-lg px-3 py-2 text-xs font-mono text-gray-600 select-all focus:outline-none"
+              />
+              
+              <button 
+                onClick={handleCopy}
+                disabled={isGenerating || !shareUrl}
+                className={`inline-flex items-center text-xs font-bold rounded-lg px-4 py-2 border transition-all cursor-pointer shadow-2xs shrink-0 select-none ${
+                  copySuccess 
+                    ? 'bg-emerald-500 text-white border-emerald-500 hover:bg-emerald-600' 
+                    : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 disabled:opacity-50'
+                }`}
+              >
+                {copySuccess ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 mr-1.5 animate-in zoom-in duration-100" />
+                    Másolva!
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5 mr-1.5" />
+                    Másolás
+                  </>
+                )}
+              </button>
+            </div>
+          )}
         </div>
 
       </div>
