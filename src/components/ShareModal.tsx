@@ -1,10 +1,17 @@
 // src/components/ShareModal.tsx
 import React, { useState, useEffect } from 'react';
-import { X, Copy, Check, Share2, AlertCircle, Shield, Key, Lock, Unlock, Link } from 'lucide-react';
+import { X, Copy, Check, Share2, AlertCircle, Shield, Key, Lock, Unlock, Link, Bookmark, Trash2, UserCheck, Plus } from 'lucide-react';
 import { Transaction } from '../types';
 import { compressShareState, EncryptionConfig } from '../utils/share';
 import { parseNumber, handleAmountInputChange } from '../utils/format';
 import { parsePublicKey } from '../utils/x25519';
+
+export interface SavedRecipient {
+  id: string;
+  name: string;
+  publicKey: string;
+  createdAt: number;
+}
 
 interface ShareModalProps {
   isOpen: boolean;
@@ -19,6 +26,8 @@ interface ShareModalProps {
   correction: number;
   customTitle: string;
 }
+
+const STORAGE_KEY_SAVED_RECIPIENTS = 'airtable_saved_recipients_v1';
 
 export const ShareModal: React.FC<ShareModalProps> = ({
   isOpen,
@@ -46,6 +55,20 @@ export const ShareModal: React.FC<ShareModalProps> = ({
   const [password, setPassword] = useState('');
   const [recipientPublicKey, setRecipientPublicKey] = useState('');
 
+  // Saved recipients (persisted in localStorage)
+  const [savedRecipients, setSavedRecipients] = useState<SavedRecipient[]>(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY_SAVED_RECIPIENTS);
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [newRecipientName, setNewRecipientName] = useState('');
+  const [isSavingRecipient, setIsSavingRecipient] = useState(false);
+  const [selectedRecipientId, setSelectedRecipientId] = useState<string>('');
+
   const [shareUrl, setShareUrl] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -68,6 +91,56 @@ export const ShareModal: React.FC<ShareModalProps> = ({
     localStorage.setItem('share_defaultKülsősAmount', defaultKülsősAmount);
   }, [defaultKülsősAmount]);
 
+  const saveRecipientsList = (list: SavedRecipient[]) => {
+    setSavedRecipients(list);
+    try {
+      localStorage.setItem(STORAGE_KEY_SAVED_RECIPIENTS, JSON.stringify(list));
+    } catch (e) {
+      console.error('Nem sikerült elmenteni a címzetteket a localStorage-be:', e);
+    }
+  };
+
+  const handleSaveCurrentKey = () => {
+    const cleanKey = recipientPublicKey.trim();
+    const cleanName = newRecipientName.trim();
+    if (!cleanKey || !cleanName) return;
+
+    if (!parsePublicKey(cleanKey)) {
+      alert('Érvénytelen publikus kulcs formátum! Nem menthető.');
+      return;
+    }
+
+    const newRecipient: SavedRecipient = {
+      id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 9),
+      name: cleanName,
+      publicKey: cleanKey,
+      createdAt: Date.now()
+    };
+
+    const updated = [newRecipient, ...savedRecipients.filter(r => r.publicKey !== cleanKey)];
+    saveRecipientsList(updated);
+    setSelectedRecipientId(newRecipient.id);
+    setNewRecipientName('');
+    setIsSavingRecipient(false);
+  };
+
+  const handleDeleteRecipient = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const updated = savedRecipients.filter(r => r.id !== id);
+    saveRecipientsList(updated);
+    if (selectedRecipientId === id) {
+      setSelectedRecipientId('');
+    }
+  };
+
+  const handleSelectRecipient = (id: string) => {
+    setSelectedRecipientId(id);
+    const found = savedRecipients.find(r => r.id === id);
+    if (found) {
+      setRecipientPublicKey(found.publicKey);
+    }
+  };
+
   useEffect(() => {
     if (!isOpen) return;
 
@@ -89,7 +162,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
       const cleanKey = recipientPublicKey.trim();
       if (!cleanKey) {
         setShareUrl('');
-        setErrorMsg('Kérjük, másolja be a címzett publikus kulcsát (pub_...)!');
+        setErrorMsg('Kérjük, válasszon vagy másoljon be egy címzett publikus kulcsot (pub_...)!');
         return;
       }
       const parsed = parsePublicKey(cleanKey);
@@ -403,17 +476,109 @@ export const ShareModal: React.FC<ShareModalProps> = ({
 
             {/* Recipient public key details */}
             {cryptoType === 'pubkey' && (
-              <div className="bg-emerald-50/50 border border-emerald-150 rounded-xl p-4 space-y-3 animate-in fade-in duration-150">
-                <label className="block text-xs font-bold text-gray-750">
-                  Címzett publikus kulcsa (Public Key)
-                </label>
-                <input 
-                  type="text"
-                  placeholder="Illessze be a címzett kulcsát (pl. pub_...)"
-                  value={recipientPublicKey}
-                  onChange={(e) => setRecipientPublicKey(e.target.value)}
-                  className="w-full bg-white border border-emerald-200 rounded-lg px-3 py-2 text-xs font-mono font-semibold focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
-                />
+              <div className="bg-emerald-50/50 border border-emerald-150 rounded-xl p-4 space-y-3.5 animate-in fade-in duration-150">
+                
+                {/* Saved recipients selector */}
+                {savedRecipients.length > 0 && (
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-gray-700 flex items-center gap-1.5">
+                      <UserCheck className="w-3.5 h-3.5 text-emerald-600" />
+                      Mentett címzettek ({savedRecipients.length})
+                    </label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {savedRecipients.map((rec) => {
+                        const isSelected = selectedRecipientId === rec.id || recipientPublicKey === rec.publicKey;
+                        return (
+                          <div 
+                            key={rec.id}
+                            onClick={() => handleSelectRecipient(rec.id)}
+                            className={`group inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-all border ${
+                              isSelected
+                                ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                                : 'bg-white text-gray-700 border-gray-200 hover:border-emerald-300 hover:bg-emerald-50/50'
+                            }`}
+                          >
+                            <span className="truncate max-w-[140px]">{rec.name}</span>
+                            <button
+                              type="button"
+                              onClick={(e) => handleDeleteRecipient(rec.id, e)}
+                              className={`p-0.5 rounded hover:bg-black/10 transition-colors ${
+                                isSelected ? 'text-white/80 hover:text-white' : 'text-gray-400 hover:text-rose-600'
+                              }`}
+                              title="Címzett törlése a mentett listából"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Public key input */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-bold text-gray-750">
+                      Címzett publikus kulcsa (Public Key)
+                    </label>
+                    {recipientPublicKey.trim() && !isSavingRecipient && (
+                      <button
+                        type="button"
+                        onClick={() => setIsSavingRecipient(true)}
+                        className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1 cursor-pointer"
+                      >
+                        <Bookmark className="w-3 h-3" />
+                        Kulcs mentése névvel
+                      </button>
+                    )}
+                  </div>
+
+                  <input 
+                    type="text"
+                    placeholder="Illessze be a címzett kulcsát (pl. pub_...)"
+                    value={recipientPublicKey}
+                    onChange={(e) => {
+                      setRecipientPublicKey(e.target.value);
+                      setSelectedRecipientId('');
+                    }}
+                    className="w-full bg-white border border-emerald-200 rounded-lg px-3 py-2 text-xs font-mono font-semibold focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
+                  />
+                </div>
+
+                {/* Save key form */}
+                {isSavingRecipient && (
+                  <div className="bg-white border border-emerald-200 rounded-xl p-3 space-y-2 animate-in fade-in duration-150">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-gray-750">Címzett elmentése a névjegyzékbe</span>
+                      <button 
+                        type="button" 
+                        onClick={() => setIsSavingRecipient(false)}
+                        className="text-gray-400 hover:text-gray-600"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <div className="flex gap-2">
+                      <input 
+                        type="text"
+                        placeholder="Név / Megnevezés (pl. Kovács János - Könyvelés)"
+                        value={newRecipientName}
+                        onChange={(e) => setNewRecipientName(e.target.value)}
+                        className="flex-1 bg-gray-50 border border-gray-300 rounded-lg px-3 py-1.5 text-xs font-medium focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
+                        autoFocus
+                      />
+                      <button
+                        type="button"
+                        onClick={handleSaveCurrentKey}
+                        disabled={!newRecipientName.trim()}
+                        className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 disabled:opacity-50 transition-colors cursor-pointer shrink-0"
+                      >
+                        Mentés
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Keygen link helper for the sender to send to recipient */}
                 <div className="bg-white border border-emerald-100 rounded-lg p-3 space-y-2">
